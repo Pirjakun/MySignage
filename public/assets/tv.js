@@ -76,27 +76,49 @@
   let currentIndex = 0;
   let timer = null;
 
+  const dbMode = isPortrait ? "portrait" : "landscape";
+
   async function loadData() {
-    try {
-      const dbList = await getDBItem(storageKey, null);
-      if (Array.isArray(dbList) && dbList.length) {
-        list = dbList;
-      } else {
-        list = defaultList;
+    let cloudList = null;
+    let cloudCfg = null;
+
+    if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
+      try {
+        cloudList = await window.MySignageSupabase.fetchPlaylistCloud(dbMode, null);
+        cloudCfg = await window.MySignageSupabase.fetchConfigCloud(dbMode, null);
+      } catch(e) {
+        console.warn("Supabase fetch failed in TV player:", e);
       }
-    } catch(e) {
-      list = defaultList;
     }
 
-    try {
-      const dbCfg = await getDBItem(configKey, null);
-      if (dbCfg && typeof dbCfg === "object") {
-        config = dbCfg;
-      } else {
+    if (Array.isArray(cloudList) && cloudList.length) {
+      list = cloudList;
+    } else {
+      try {
+        const dbList = await getDBItem(storageKey, null);
+        if (Array.isArray(dbList) && dbList.length) {
+          list = dbList;
+        } else {
+          list = defaultList;
+        }
+      } catch(e) {
+        list = defaultList;
+      }
+    }
+
+    if (cloudCfg && typeof cloudCfg === "object") {
+      config = cloudCfg;
+    } else {
+      try {
+        const dbCfg = await getDBItem(configKey, null);
+        if (dbCfg && typeof dbCfg === "object") {
+          config = dbCfg;
+        } else {
+          config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
+        }
+      } catch(e) {
         config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
       }
-    } catch(e) {
-      config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
     }
   }
 
@@ -195,6 +217,12 @@
   window.addEventListener("storage", function() {
     onDataChanged();
   });
+
+  if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
+    window.MySignageSupabase.subscribeRealtimeCloud(() => {
+      onDataChanged();
+    });
+  }
 
   // Start player
   startPlayback();

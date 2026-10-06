@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/supabase-config.js"></script>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -686,6 +688,31 @@
     </div>
   </div>
 
+  <!-- Supabase Credentials Settings Modal -->
+  <div id="supabaseModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-title">☁️ Pengaturan Supabase Cloud</div>
+      <div class="modal-desc">
+        Hubungkan ke Supabase agar foto & playlist tersinkronkan secara real-time di semua perangkat (TV, PC, HP) via internet.
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-muted);">Supabase Project URL:</label>
+        <input id="spUrlInput" class="input-field" style="width: 100%;" type="url" placeholder="https://xyzxyz.supabase.co">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-muted);">Supabase Anon Public Key:</label>
+        <input id="spKeyInput" class="input-field" style="width: 100%;" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+      </div>
+      <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; margin-bottom: 20px; color: var(--text-muted);">
+        ℹ️ <b>Petunjuk:</b> Dapatkan Project URL dan Anon Key di dashboard Supabase (<b>Project Settings -&gt; API</b>). Pastikan tabel dan storage bucket sudah dibuat menggunakan script <code>supabase_schema.sql</code>.
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeSupabaseModal()">Batal</button>
+        <button class="btn btn-primary" onclick="saveSupabaseSettings()">💾 Simpan &amp; Hubungkan</button>
+      </div>
+    </div>
+  </div>
+
   <header class="header">
     <div class="header-inner">
       <div>
@@ -693,6 +720,9 @@
         <div class="brand-sub">Management System - Screen Fit & Aspect Control</div>
       </div>
       <div class="nav-links">
+        <button id="supabaseStatusBtn" class="nav-link" onclick="openSupabaseModal()" style="border: 1px solid var(--primary); cursor: pointer; background: rgba(59,130,246,0.15);">
+          <span id="supabaseStatusDot">🔴</span> <span id="supabaseStatusText">Cloud Supabase</span>
+        </button>
         <a class="nav-link" href="/">🏠 Home</a>
         <a class="nav-link" href="/tv/landscape" target="_blank">🖥️ Open Landscape TV</a>
         <a class="nav-link" href="/tv/portrait" target="_blank">📱 Open Portrait TV</a>
@@ -928,6 +958,7 @@
     let inputType = "file";
     let loadedFileData = null;
     let loadedFileName = "";
+    let loadedFileObj = null;
 
     let playlists = {
       landscape: [...DEFAULT_LANDSCAPE],
@@ -939,12 +970,76 @@
       portrait: { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" }
     };
 
-    async function initStorage() {
-      playlists.landscape = await getDBItem(KEY_LANDSCAPE, DEFAULT_LANDSCAPE);
-      playlists.portrait = await getDBItem(KEY_PORTRAIT, DEFAULT_PORTRAIT);
+    function updateSupabaseStatusUI() {
+      const dot = document.getElementById("supabaseStatusDot");
+      const text = document.getElementById("supabaseStatusText");
+      if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
+        if (dot) dot.textContent = "🟢";
+        if (text) text.textContent = "Supabase Terhubung";
+      } else {
+        if (dot) dot.textContent = "🔴";
+        if (text) text.textContent = "Cloud Supabase (Offline)";
+      }
+    }
 
-      configs.landscape = await getDBItem(KEY_CONFIG_LANDSCAPE, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
-      configs.portrait = await getDBItem(KEY_CONFIG_PORTRAIT, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
+    function openSupabaseModal() {
+      if (window.MySignageSupabase) {
+        document.getElementById("spUrlInput").value = window.MySignageSupabase.getUrl();
+        document.getElementById("spKeyInput").value = window.MySignageSupabase.getKey();
+      }
+      document.getElementById("supabaseModal").classList.add("active");
+    }
+
+    function closeSupabaseModal() {
+      document.getElementById("supabaseModal").classList.remove("active");
+    }
+
+    async function saveSupabaseSettings() {
+      const u = document.getElementById("spUrlInput").value.trim();
+      const k = document.getElementById("spKeyInput").value.trim();
+      if (window.MySignageSupabase) {
+        window.MySignageSupabase.setCredentials(u, k);
+        updateSupabaseStatusUI();
+        closeSupabaseModal();
+        if (u && k) {
+          showToast("Kredensial Disimpan ☁️", "Mencoba memuat data dari Supabase Cloud...", "info");
+          await initStorage();
+          showToast("Berhasil Terhubung ✨", "MySignage siap beroperasi dengan Supabase Cloud!", "success");
+        } else {
+          showToast("Kredensial Dihapus", "MySignage beralih ke IndexedDB Penyimpanan Lokal.", "info");
+        }
+      }
+    }
+
+    async function initStorage() {
+      updateSupabaseStatusUI();
+
+      let cloudLandscape = null;
+      let cloudPortrait = null;
+      let cfgLandscape = null;
+      let cfgPortrait = null;
+
+      if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
+        try {
+          cloudLandscape = await window.MySignageSupabase.fetchPlaylistCloud("landscape", null);
+          cloudPortrait = await window.MySignageSupabase.fetchPlaylistCloud("portrait", null);
+          cfgLandscape = await window.MySignageSupabase.fetchConfigCloud("landscape", null);
+          cfgPortrait = await window.MySignageSupabase.fetchConfigCloud("portrait", null);
+        } catch(e) {
+          console.warn("Supabase initial fetch warning:", e);
+        }
+      }
+
+      const localLandscape = await getDBItem(KEY_LANDSCAPE, DEFAULT_LANDSCAPE);
+      const localPortrait = await getDBItem(KEY_PORTRAIT, DEFAULT_PORTRAIT);
+      const localCfgL = await getDBItem(KEY_CONFIG_LANDSCAPE, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
+      const localCfgP = await getDBItem(KEY_CONFIG_PORTRAIT, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
+
+      playlists.landscape = Array.isArray(cloudLandscape) && cloudLandscape.length ? cloudLandscape : localLandscape;
+      playlists.portrait = Array.isArray(cloudPortrait) && cloudPortrait.length ? cloudPortrait : localPortrait;
+
+      configs.landscape = (cfgLandscape && typeof cfgLandscape === "object") ? cfgLandscape : localCfgL;
+      configs.portrait = (cfgPortrait && typeof cfgPortrait === "object") ? cfgPortrait : localCfgP;
 
       switchTab("landscape");
     }
@@ -1178,6 +1273,7 @@
       }
 
       loadedFileName = file.name;
+      loadedFileObj = file;
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1228,12 +1324,24 @@
       let displayName = "";
 
       if (inputType === "file") {
-        if (!loadedFileData) {
+        if (!loadedFileData && !loadedFileObj) {
           showToast("File Belum Dipilih ⚠️", "Silakan klik atau drag foto dari perangkat Anda.", "warning");
           return;
         }
-        imgSrc = loadedFileData;
-        displayName = loadedFileName || "File Lokal";
+
+        if (window.MySignageSupabase && window.MySignageSupabase.isConfigured() && loadedFileObj) {
+          showToast("Mengunggah Foto ke Cloud... ☁️", "Mohon tunggu sejenak.", "info", 5000);
+          try {
+            imgSrc = await window.MySignageSupabase.uploadImageFileCloud(loadedFileObj);
+            displayName = loadedFileName || "Foto Cloud";
+          } catch(err) {
+            showToast("Gagal Upload ke Cloud ⚠️", err.message, "danger", 6000);
+            return;
+          }
+        } else {
+          imgSrc = loadedFileData;
+          displayName = loadedFileName || "File Lokal";
+        }
       } else {
         imgSrc = document.getElementById("imageUrl").value.trim();
         if (!imgSrc) {
@@ -1256,6 +1364,7 @@
       document.getElementById("fileNamePreview").style.display = "none";
       loadedFileData = null;
       loadedFileName = "";
+      loadedFileObj = null;
 
       updateModeUI();
       render();
@@ -1340,11 +1449,26 @@
         return;
       }
 
+      let cloudSaved = false;
+      if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
+        try {
+          const pOk = await window.MySignageSupabase.savePlaylistCloud(currentMode, playlists[currentMode]);
+          const cOk = await window.MySignageSupabase.saveConfigCloud(currentMode, configs[currentMode]);
+          cloudSaved = pOk && cOk;
+        } catch(e) {
+          console.warn("Cloud save error:", e);
+        }
+      }
+
       updateBadges();
 
       if (showToastNotification) {
         const label = currentMode === "landscape" ? "Landscape" : "Portrait";
-        showToast("Perubahan Tersimpan! 💾", `Playlist ${label} tersimpan di IndexedDB & disinkronkan ke TV.`, "success");
+        if (cloudSaved) {
+          showToast("Tersimpan di Cloud! ☁️✨", `Playlist ${label} berhasil disinkronkan ke Supabase & semua TV.`, "success");
+        } else {
+          showToast("Perubahan Tersimpan! 💾", `Playlist ${label} tersimpan di IndexedDB & disinkronkan ke TV.`, "success");
+        }
       }
     }
 
