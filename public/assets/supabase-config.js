@@ -4,12 +4,15 @@
   const STORAGE_KEY_URL = "mysignage_supabase_url";
   const STORAGE_KEY_KEY = "mysignage_supabase_key";
 
+  const DEFAULT_URL = "https://gbznxsvjrxpjuomjkjuq.supabase.co";
+  const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdiem54c3ZqcnhwanVvbWpranVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMzc5NjksImV4cCI6MjEwNjgxMzk2OX0.2pjYTKuhZjigt-mXoVwwINKlTB-r7FjPOHaLYO87MkI";
+
   function getUrl() {
-    return window.MYSIGNAGE_SUPABASE_URL || localStorage.getItem(STORAGE_KEY_URL) || "";
+    return window.MYSIGNAGE_SUPABASE_URL || localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_URL;
   }
 
   function getKey() {
-    return window.MYSIGNAGE_SUPABASE_KEY || localStorage.getItem(STORAGE_KEY_KEY) || "";
+    return window.MYSIGNAGE_SUPABASE_KEY || localStorage.getItem(STORAGE_KEY_KEY) || DEFAULT_KEY;
   }
 
   function isConfigured() {
