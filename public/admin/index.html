@@ -1771,7 +1771,9 @@
         const inputHash = await sha256(pw);
         const storedHash = localStorage.getItem(AUTH_KEYS.PW_HASH);
         if (!storedHash) {
-          // First-time setup: store default and mark mustChange
+          // First-time setup: only the default password is accepted
+          const defaultHash = await sha256(DEFAULT_PASSWORD);
+          if (inputHash !== defaultHash) throw new Error("Password salah. Silakan coba lagi.");
           localStorage.setItem(AUTH_KEYS.PW_HASH, inputHash);
           localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "true");
           localStorage.setItem(AUTH_KEYS.AUTHED, "true");
@@ -1782,7 +1784,7 @@
           if (mustChange) {
             showChangePwModal();
           } else {
-            dismissAuthGate();
+            enterAdmin();
           }
         } else {
           throw new Error("Password salah. Silakan coba lagi.");
@@ -1801,7 +1803,15 @@
     function dismissAuthGate() {
       document.getElementById("authGate").classList.add("hidden");
       document.body.style.overflow = "";
-      initStorage();
+    }
+
+    let storageInitialized = false;
+    function enterAdmin() {
+      dismissAuthGate();
+      if (!storageInitialized) {
+        storageInitialized = true;
+        initStorage();
+      }
     }
 
     function showChangePwModal() {
@@ -1835,7 +1845,7 @@
       localStorage.setItem(AUTH_KEYS.PW_HASH, hash);
       localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "false");
       closeChangePwModal();
-      dismissAuthGate();
+      enterAdmin();
       showToast("Password Diubah", "Password berhasil diubah. Selamat datang!", "success");
     }
 
