@@ -3,232 +3,379 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MySignage Admin - Kelola Playlist & Mode Tayang</title>
+  <title>MySignage Admin — Control Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/supabase-config.js"></script>
   <style>
     :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --accent: #06b6d4;
+      --bg-deep: #0a0a0b;
+      --bg-surface: #141416;
+      --bg-elevated: #1c1c20;
+      --bg-hover: #232328;
+      --border: #2a2a30;
+      --border-strong: #3a3a42;
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.1);
+      --amber-border: rgba(245, 158, 11, 0.3);
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
       --danger: #ef4444;
-      --danger-hover: #dc2626;
+      --danger-dim: rgba(239, 68, 68, 0.1);
       --success: #10b981;
-      --warning: #f59e0b;
+      --success-dim: rgba(16, 185, 129, 0.1);
+      --info: #06b6d4;
+      --info-dim: rgba(6, 182, 212, 0.1);
+      --radius: 14px;
+      --radius-sm: 8px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
       min-height: 100vh;
-      padding-bottom: 60px;
     }
 
-    /* Toast Notification Container */
-    #toastContainer {
+    /* Grain overlay */
+    body::before {
+      content: '';
       position: fixed;
-      top: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
       pointer-events: none;
+      z-index: 0;
     }
 
-    .toast {
-      pointer-events: auto;
-      min-width: 300px;
-      max-width: 420px;
-      background: rgba(30, 41, 59, 0.95);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--card-border);
-      border-left: 5px solid var(--primary);
-      border-radius: 12px;
-      padding: 14px 18px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    /* ── HEADER ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 10, 11, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      height: 60px;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
       gap: 12px;
-      color: var(--text-main);
-      transform: translateX(120%);
-      opacity: 0;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      text-decoration: none;
+      color: inherit;
     }
 
-    .toast.show {
-      transform: translateX(0);
-      opacity: 1;
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--amber-dim);
+      border: 1px solid var(--amber-border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .toast-icon {
-      font-size: 20px;
-      flex-none: true;
-      margin-top: 1px;
+    .brand-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--amber);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
-    .toast-body {
-      flex: 1;
-    }
-
-    .toast-title {
+    .brand-text {
+      font-family: 'Space Mono', monospace;
       font-size: 14px;
       font-weight: 700;
-      margin-bottom: 2px;
+      letter-spacing: 0.05em;
     }
 
-    .toast-desc {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.4;
+    .brand-text span {
+      color: var(--amber);
     }
 
-    .toast.success { border-left-color: var(--success); }
-    .toast.success .toast-icon { color: var(--success); }
-
-    .toast.warning { border-left-color: var(--warning); }
-    .toast.warning .toast-icon { color: var(--warning); }
-
-    .toast.danger { border-left-color: var(--danger); }
-    .toast.danger .toast-icon { color: var(--danger); }
-
-    .toast.info { border-left-color: var(--accent); }
-    .toast.info .toast-icon { color: var(--accent); }
-
-    /* Custom Modal Overlay */
-    .modal-overlay {
+    /* ── AUTH GATE ── */
+    .auth-gate {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(8px);
-      z-index: 9000;
+      inset: 0;
+      z-index: 99999;
+      background: var(--bg-deep);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
     }
 
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .auth-gate.hidden { display: none; }
 
-    .modal-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
+    .auth-box {
       width: 100%;
-      max-width: 440px;
-      padding: 28px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-      transform: scale(0.92);
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 380px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
     }
 
-    .modal-overlay.active .modal-card {
-      transform: scale(1);
+    .auth-brand {
+      text-align: center;
+      margin-bottom: 28px;
     }
 
-    .modal-title {
+    .auth-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--amber-dim);
+      border: 1px solid var(--amber-border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+      color: var(--amber);
+    }
+
+    .auth-title {
+      font-family: 'Space Mono', monospace;
       font-size: 18px;
       font-weight: 700;
-      margin-bottom: 8px;
+      color: var(--text-primary);
+      margin-bottom: 6px;
     }
 
-    .modal-desc {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    /* Navigation & Header */
-    .header {
-      background: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--card-border);
-      padding: 18px 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-
-    .brand-title {
-      font-size: 22px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #60a5fa, #c084fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .brand-sub {
+    .auth-subtitle {
       font-size: 13px;
       color: var(--text-muted);
     }
 
-    .nav-links {
-      display: flex;
-      gap: 10px;
+    .auth-field { margin-bottom: 18px; }
+
+    .auth-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
     }
 
-    .nav-link {
+    .auth-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .auth-input-wrap input {
+      width: 100%;
+      padding: 11px 42px 11px 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Outfit', sans-serif;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .auth-input-wrap input:focus {
+      border-color: var(--amber-border);
+    }
+
+    .auth-toggle {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+
+    .auth-toggle:hover { color: var(--text-primary); }
+
+    .auth-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--amber);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .auth-btn:hover { background: #d97706; }
+    .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .auth-footer {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .auth-forgot {
+      font-size: 13px;
       color: var(--text-muted);
       text-decoration: none;
-      padding: 8px 14px;
-      border-radius: 8px;
+      transition: color 0.2s;
+    }
+
+    .auth-forgot:hover { color: var(--amber); }
+
+    .auth-error {
+      font-size: 12px;
+      color: var(--danger);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .auth-warning {
+      margin-top: 20px;
+      padding: 10px 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      line-height: 1.4;
+    }
+
+    /* ── RESPONSIVE AUTH ── */
+    @media (max-width: 480px) {
+      .auth-box { padding: 24px; }
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
       font-size: 13px;
-      font-weight: 600;
-      background: rgba(255, 255, 255, 0.05);
+      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      cursor: pointer;
       transition: all 0.2s;
     }
 
-    .nav-link:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.12);
-      transform: translateY(-1px);
+    .btn-nav:hover {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
     }
 
-    .container {
+    .btn-cloud {
+      border-color: var(--amber-border);
+      color: var(--amber);
+      background: var(--amber-dim);
+    }
+
+    .btn-cloud:hover {
+      background: rgba(245, 158, 11, 0.18);
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .layout {
+      position: relative;
+      z-index: 1;
       max-width: 1100px;
-      margin: 30px auto 0;
-      padding: 0 20px;
+      margin: 0 auto;
+      padding: 24px 24px 60px;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      align-items: start;
     }
 
-    /* Tabs Styling */
-    .tabs-container {
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── SECTION PANELS ── */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+
+    .panel-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .panel-body {
+      padding: 22px;
+    }
+
+    /* ── TAB SWITCHER ── */
+    .tab-row {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      background: var(--bg-deep);
+      border-radius: var(--radius);
       margin-bottom: 24px;
+      border: 1px solid var(--border);
     }
 
     .tab-btn {
@@ -236,339 +383,383 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 14px 20px;
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      background: var(--card-bg);
-      color: var(--text-muted);
-      font-size: 15px;
+      gap: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
       font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: all 0.25s;
+      transition: all 0.2s;
     }
 
     .tab-btn:hover {
-      color: #fff;
-      background: rgba(51, 65, 85, 0.6);
-      transform: translateY(-2px);
+      color: var(--text-secondary);
+      background: var(--bg-surface);
     }
 
     .tab-btn.active {
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
-      color: #fff;
-      border-color: var(--primary);
-      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+      color: var(--amber);
+      background: var(--amber-dim);
+      border-color: var(--amber-border);
     }
 
     .tab-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.08);
+      padding: 2px 7px;
       border-radius: 20px;
-      font-size: 12px;
+      color: var(--text-secondary);
     }
 
-    /* Card Styling */
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 26px;
-      margin-bottom: 24px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    .tab-btn.active .tab-badge {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--amber);
     }
 
-    .card-title {
-      font-size: 18px;
+    /* ── MODE CONTROLS (sidebar) ── */
+    .mode-section {
+      margin-bottom: 20px;
+    }
+
+    .mode-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .mode-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
       font-weight: 700;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    /* Mode Selection Banner */
-    .mode-card {
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
-      border: 1px solid rgba(96, 165, 250, 0.25);
-      border-radius: 16px;
-      padding: 22px 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-    }
-
-    .mode-header {
-      font-size: 15px;
-      font-weight: 700;
-      color: #93c5fd;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .mode-section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .mode-options {
       display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .mode-btn {
-      flex: 1;
-      min-width: 220px;
+    .mode-opt {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px 20px;
-      border-radius: 14px;
-      border: 1px solid var(--card-border);
-      background: rgba(15, 23, 42, 0.6);
-      color: var(--text-muted);
+      padding: 12px 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all 0.2s;
     }
 
-    .mode-btn:hover {
-      border-color: rgba(255, 255, 255, 0.25);
-      color: #fff;
-      transform: translateY(-2px);
+    .mode-opt:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
     }
 
-    .mode-btn.active {
-      background: rgba(59, 130, 246, 0.18);
-      border-color: var(--primary);
-      color: #fff;
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+    .mode-opt.active {
+      border-color: var(--amber-border);
+      background: var(--amber-dim);
     }
 
-    .mode-icon {
-      font-size: 26px;
+    .mode-opt-radio {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      flex-shrink: 0;
+      transition: all 0.2s;
+      position: relative;
     }
 
-    .mode-info {
-      text-align: left;
+    .mode-opt.active .mode-opt-radio {
+      border-color: var(--amber);
     }
 
-    .mode-title {
-      font-size: 14px;
-      font-weight: 700;
+    .mode-opt.active .mode-opt-radio::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+      background: var(--amber);
     }
 
-    .mode-desc {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
+    .mode-opt-content {
+      flex: 1;
+      min-width: 0;
     }
 
-    .freeze-select-container {
-      margin-top: 14px;
-      padding-top: 14px;
-      border-top: 1px dashed var(--card-border);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    /* Input Type Selector */
-    .input-type-selector {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .type-btn {
-      padding: 9px 18px;
+    .mode-opt-title {
       font-size: 13px;
       font-weight: 600;
-      border-radius: 10px;
-      border: 1px solid var(--card-border);
-      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+    }
+
+    .mode-opt-desc {
+      font-size: 12px;
       color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Freeze selector */
+    .freeze-select-wrap {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .freeze-select-wrap select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: 'Outfit', sans-serif;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    .freeze-select-wrap select:focus {
+      border-color: var(--amber-border);
+    }
+
+    /* ── ADD IMAGE FORM ── */
+    .input-type-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      background: var(--bg-deep);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .type-tab {
+      flex: 1;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
       transition: all 0.2s;
     }
 
-    .type-btn:hover {
-      color: #fff;
+    .type-tab:hover {
+      color: var(--text-secondary);
     }
 
-    .type-btn.active {
-      background: rgba(59, 130, 246, 0.2);
-      color: #60a5fa;
-      border-color: var(--primary);
+    .type-tab.active {
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
-    .upload-box {
-      border: 2px dashed var(--card-border);
-      border-radius: 14px;
-      padding: 30px 20px;
+    /* Drop zone */
+    .drop-zone {
+      position: relative;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
       text-align: center;
-      background: rgba(15, 23, 42, 0.4);
+      background: var(--bg-deep);
       cursor: pointer;
       transition: all 0.25s;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
-    .upload-box:hover, .upload-box.dragover {
-      border-color: var(--primary);
-      background: rgba(59, 130, 246, 0.08);
-      transform: scale(1.005);
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--amber-border);
+      background: var(--amber-dim);
     }
 
-    .upload-box p {
+    .drop-zone-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      opacity: 0.6;
+    }
+
+    .drop-zone-text {
       font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .drop-zone-hint {
+      font-size: 12px;
       color: var(--text-muted);
-      margin-top: 8px;
+      margin-top: 4px;
     }
 
-    .file-name-preview {
-      margin-top: 10px;
-      padding: 10px 14px;
-      background: rgba(6, 182, 212, 0.1);
-      border: 1px solid rgba(6, 182, 212, 0.25);
-      border-radius: 10px;
-      font-size: 13px;
-      color: var(--accent);
-      word-break: break-all;
-    }
-
-    .form-group {
+    .file-preview {
       display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--success-dim);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-sm);
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: var(--success);
     }
 
-    .input-field {
+    .url-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+
+    .url-input-wrap input {
       flex: 1;
-      min-width: 240px;
-      padding: 12px 16px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      color: #fff;
+    }
+
+    /* Form row */
+    .form-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .form-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .form-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
       font-size: 14px;
+      font-family: 'Outfit', sans-serif;
       outline: none;
       transition: border 0.2s;
     }
 
-    .input-field:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    .form-input:focus {
+      border-color: var(--amber-border);
     }
 
-    .input-duration {
-      width: 140px;
+    .form-input.w-small {
+      flex: none;
+      width: 100px;
     }
 
+    /* Buttons */
     .btn {
-      padding: 12px 22px;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
       transition: all 0.2s;
     }
 
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
+    .btn-amber {
+      background: var(--amber);
+      color: #000;
     }
 
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-      transform: translateY(-1px);
+    .btn-amber:hover {
+      background: #d97706;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
     }
 
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-main);
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
     }
 
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
+    .btn-ghost:hover {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
     }
 
     .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.25);
     }
 
     .btn-danger:hover {
       background: var(--danger);
       color: #fff;
-      transform: translateY(-1px);
     }
 
-    /* Playlist Items */
+    /* ── PLAYLIST ── */
     .playlist-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
     }
 
     .playlist-item {
       display: flex;
       align-items: center;
-      gap: 16px;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 14px 18px;
-      transition: all 0.25s;
+      gap: 14px;
+      padding: 12px 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
     }
 
     .playlist-item:hover {
-      border-color: rgba(255, 255, 255, 0.25);
-      transform: translateX(4px);
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
     }
 
-    .playlist-item.is-frozen {
-      border-color: var(--warning);
-      background: rgba(245, 158, 11, 0.09);
-      box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+    .playlist-item.frozen {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.06);
     }
 
-    /* Thumbnail ratios */
-    .thumb-wrapper {
-      position: relative;
-      flex: none;
-      border-radius: 10px;
+    .item-thumb {
+      width: 64px;
+      height: 38px;
+      border-radius: 6px;
       overflow: hidden;
       background: #000;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .thumb-landscape {
-      width: 110px;
-      height: 62px;
-    }
-
-    .thumb-portrait {
-      width: 48px;
-      height: 85px;
-    }
-
-    .thumb-img {
+    .item-thumb img {
       width: 100%;
       height: 100%;
       object-fit: contain;
@@ -579,279 +770,528 @@
       min-width: 0;
     }
 
-    .item-url {
-      font-size: 14px;
+    .item-name {
+      font-size: 13px;
       font-weight: 600;
+      color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #f1f5f9;
     }
 
     .item-meta {
       font-size: 12px;
       color: var(--text-muted);
-      margin-top: 5px;
+      margin-top: 3px;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
     }
 
-    .freeze-badge {
-      background: var(--warning);
-      color: #000;
-      font-weight: 700;
+    .source-tag {
+      font-family: 'Space Mono', monospace;
       font-size: 10px;
-      padding: 2px 8px;
+      padding: 1px 6px;
       border-radius: 4px;
-      letter-spacing: 0.5px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .freeze-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--amber-dim);
+      border: 1px solid var(--amber-border);
+      color: var(--amber);
+      letter-spacing: 0.05em;
     }
 
     .item-actions {
       display: flex;
-      gap: 6px;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
     .icon-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
-      color: var(--text-main);
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
       transition: all 0.2s;
     }
 
     .icon-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: scale(1.05);
-    }
-
-    .icon-btn.freeze-btn {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--warning);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
     }
 
     .icon-btn.freeze-btn:hover {
-      background: var(--warning);
-      color: #000;
-    }
-
-    .icon-btn.delete {
-      background: rgba(239, 68, 68, 0.15);
-      color: #ef4444;
+      color: var(--amber);
+      border-color: var(--amber-border);
+      background: var(--amber-dim);
     }
 
     .icon-btn.delete:hover {
-      background: var(--danger);
-      color: #fff;
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.4);
+      background: var(--danger-dim);
     }
 
-    .note {
+    .playlist-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .playlist-empty-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+      opacity: 0.4;
+    }
+
+    /* Playlist footer actions */
+    .playlist-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .playlist-footer .btn {
+      flex: 1;
+    }
+
+    /* ── TOAST ── */
+    #toastContainer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      min-width: 280px;
+      max-width: 400px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--amber);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--text-primary);
+      transform: translateX(110%);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast.success { border-left-color: var(--success); }
+    .toast.warning { border-left-color: var(--amber); }
+    .toast.danger { border-left-color: var(--danger); }
+    .toast.info { border-left-color: var(--info); }
+
+    .toast-icon { font-size: 16px; flex: none; }
+    .toast-body { flex: 1; }
+    .toast-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+    .toast-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 11, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+      transform: scale(0.95);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-desc {
       font-size: 13px;
       color: var(--text-muted);
-      margin-top: 10px;
       line-height: 1.5;
+      margin-bottom: 20px;
     }
 
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .modal-input-wrap {
+      margin-bottom: 16px;
+    }
+
+    .modal-input-wrap label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .modal-input-wrap input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Outfit', sans-serif;
+      outline: none;
+    }
+
+    .modal-input-wrap input:focus {
+      border-color: var(--amber-border);
+    }
+
+    .modal-hint {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
-      .playlist-item {
-        flex-direction: column;
-        align-items: flex-start;
+      .layout {
+        padding: 16px 16px 40px;
       }
-      .item-actions {
-        width: 100%;
-        justify-content: flex-end;
+      .topbar-inner {
+        height: 54px;
+      }
+      .btn-nav span.btn-text {
+        display: none;
+      }
+      .item-thumb {
+        width: 48px;
+        height: 28px;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Floating Toast Notifications Holder -->
+  <!-- ── AUTH GATE ── -->
+  <div id="authGate" class="auth-gate">
+    <div class="auth-box">
+      <div class="auth-brand">
+        <div class="auth-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="auth-title">MySignage Admin</div>
+        <div class="auth-subtitle">Masukkan password untuk mengakses panel.</div>
+      </div>
+
+      <form id="authLoginForm" onsubmit="return handleLogin(event)">
+        <div class="auth-field">
+          <label class="auth-label">Password</label>
+          <div class="auth-input-wrap">
+            <input id="authPassword" type="password" placeholder="Masukkan password..." autocomplete="current-password" required autofocus>
+            <button type="button" class="auth-toggle" onclick="toggleAuthPassword()" title="Tampilkan/sembunyikan">
+              <svg id="authEyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div id="authError" class="auth-error" style="display:none;"></div>
+        </div>
+        <button type="submit" class="auth-btn" id="authSubmitBtn">
+          <span class="auth-btn-text">Masuk</span>
+          <span class="auth-btn-spinner" style="display:none;">⏳</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <a href="mailto:fyrzatullah@gmail.com?subject=Lupa%20Password%20Admin%20MySignage&body=Halo%2C%20saya%20lupa%20password%20admin%20MySignage.%20Mohon%20bantu%20reset." class="auth-forgot">Lupa password?</a>
+      </div>
+      <div class="auth-warning">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Password disimpan secara lokal. Aman untuk penggunaan internal.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHANGE PASSWORD MODAL ── -->
+  <div id="changePwModal" class="modal-overlay">
+    <div class="modal-card" style="max-width:400px;">
+      <div class="modal-title">🔐 Ganti Password</div>
+      <div class="modal-desc">Password default harus diganti sebelum mengakses admin.</div>
+      <div class="modal-input-wrap" style="margin-bottom:12px;">
+        <label>Password Baru</label>
+        <input id="newPwInput" type="password" placeholder="Minimal 6 karakter..." minlength="6" autocomplete="new-password">
+      </div>
+      <div class="modal-input-wrap" style="margin-bottom:16px;">
+        <label>Konfirmasi Password</label>
+        <input id="confirmPwInput" type="password" placeholder="Ulangi password baru..." minlength="6" autocomplete="new-password">
+      </div>
+      <div id="changePwError" class="auth-error" style="display:none;margin-bottom:12px;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeChangePwModal()">Batal</button>
+        <button class="btn btn-amber" onclick="submitChangePw()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
   <div id="toastContainer"></div>
 
-  <!-- Custom Confirmation & Prompt Modals -->
+  <!-- Confirmation Modal -->
   <div id="customModal" class="modal-overlay">
     <div class="modal-card">
       <div id="modalTitle" class="modal-title">Konfirmasi</div>
       <div id="modalDesc" class="modal-desc">Apakah Anda yakin?</div>
-      <div id="modalInputContainer" style="display: none; margin-bottom: 20px;">
-        <input id="modalInput" class="input-field" style="width: 100%;" type="text">
+      <div id="modalInputContainer" style="display:none; margin-bottom:16px;">
+        <div class="modal-input-wrap">
+          <input id="modalInput" type="text">
+        </div>
       </div>
       <div class="modal-actions">
-        <button id="modalCancelBtn" class="btn btn-secondary">Batal</button>
-        <button id="modalConfirmBtn" class="btn btn-primary">Ya, Lanjutkan</button>
+        <button id="modalCancelBtn" class="btn btn-ghost">Batal</button>
+        <button id="modalConfirmBtn" class="btn btn-amber">Ya, Lanjutkan</button>
       </div>
     </div>
   </div>
 
-  <!-- Supabase Credentials Settings Modal -->
+  <!-- Supabase Modal -->
   <div id="supabaseModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 520px;">
-      <div class="modal-title">☁️ Pengaturan Supabase Cloud</div>
+    <div class="modal-card">
+      <div class="modal-title">Pengaturan Cloud Supabase</div>
       <div class="modal-desc">
-        Hubungkan ke Supabase agar foto & playlist tersinkronkan secara real-time di semua perangkat (TV, PC, HP) via internet.
+        Hubungkan ke Supabase agar foto & playlist tersinkronkan secara real-time di semua perangkat.
       </div>
-      <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-muted);">Supabase Project URL:</label>
-        <input id="spUrlInput" class="input-field" style="width: 100%;" type="url" placeholder="https://xyzxyz.supabase.co">
+      <div class="modal-input-wrap" style="margin-bottom:12px;">
+        <label>Project URL</label>
+        <input id="spUrlInput" type="url" placeholder="https://xxx.supabase.co">
       </div>
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-muted);">Supabase Anon Public Key:</label>
-        <input id="spKeyInput" class="input-field" style="width: 100%;" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+      <div class="modal-input-wrap" style="margin-bottom:12px;">
+        <label>Anon Public Key</label>
+        <input id="spKeyInput" type="password" placeholder="eyJhbGciOiJIUzI1NiIs...">
       </div>
-      <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; margin-bottom: 20px; color: var(--text-muted);">
-        ℹ️ <b>Petunjuk:</b> Dapatkan Project URL dan Anon Key di dashboard Supabase (<b>Project Settings -&gt; API</b>). Pastikan tabel dan storage bucket sudah dibuat menggunakan script <code>supabase_schema.sql</code>.
+      <div class="modal-hint">
+        Dapatkan kredensial di <b>Dashboard Supabase → Project Settings → API</b>. Pastikan tabel & storage bucket sudah dibuat menggunakan script <code>supabase_schema.sql</code>.
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeSupabaseModal()">Batal</button>
-        <button class="btn btn-primary" onclick="saveSupabaseSettings()">💾 Simpan &amp; Hubungkan</button>
+        <button class="btn btn-ghost" onclick="closeSupabaseModal()">Batal</button>
+        <button class="btn btn-amber" onclick="saveSupabaseSettings()">Simpan & Hubungkan</button>
       </div>
     </div>
   </div>
 
-  <header class="header">
-    <div class="header-inner">
-      <div>
-        <div class="brand-title">MySignage Admin</div>
-        <div class="brand-sub">Management System - Screen Fit & Aspect Control</div>
-      </div>
-      <div class="nav-links">
-        <button id="supabaseStatusBtn" class="nav-link" onclick="openSupabaseModal()" style="border: 1px solid var(--primary); cursor: pointer; background: rgba(59,130,246,0.15);">
-          <span id="supabaseStatusDot">🔴</span> <span id="supabaseStatusText">Cloud Supabase</span>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="brand-text">My<span>Signage</span></div>
+      </a>
+      <div class="topbar-actions">
+        <button id="supabaseStatusBtn" class="btn-nav btn-cloud" onclick="openSupabaseModal()">
+          <span id="supabaseStatusDot">●</span>
+          <span id="supabaseStatusText">Cloud</span>
         </button>
-        <a class="nav-link" href="/">🏠 Home</a>
-        <a class="nav-link" href="/tv/landscape" target="_blank">🖥️ Open Landscape TV</a>
-        <a class="nav-link" href="/tv/portrait" target="_blank">📱 Open Portrait TV</a>
+        <a class="btn-nav" href="/">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span class="btn-text">Home</span>
+        </a>
+        <a class="btn-nav" href="/tv/landscape" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span class="btn-text">Landscape</span>
+        </a>
+        <a class="btn-nav" href="/tv/portrait" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+          <span class="btn-text">Portrait</span>
+        </a>
+        <button class="btn-nav" onclick="handleLogout()" title="Keluar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7 11 12"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span class="btn-text">Keluar</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <div class="container">
+  <!-- Layout -->
+  <div class="layout">
 
-    <!-- Tab Switcher -->
-    <div class="tabs-container">
-      <button id="tab-landscape" class="tab-btn active" onclick="switchTab('landscape')">
-        <span>🖥️ Display Landscape</span>
-        <span id="badge-landscape" class="tab-badge">0</span>
-      </button>
-      <button id="tab-portrait" class="tab-btn" onclick="switchTab('portrait')">
-        <span>📱 Display Portrait</span>
-        <span id="badge-portrait" class="tab-badge">0</span>
-      </button>
-    </div>
+    <!-- LEFT: Main Content -->
+    <div class="main-col">
 
-    <!-- Mode Tayang & Fit Mode Control Card -->
-    <div class="mode-card">
-      <div class="mode-header">
-        <span>⚙️ Pengaturan Tayangan (<span id="mode-orientation-label">Landscape</span>)</span>
-      </div>
-
-      <div class="mode-section-title">1. Mode Tayang</div>
-      <div class="mode-options">
-        <button id="mode-playlist-btn" class="mode-btn active" onclick="setPlaybackMode('playlist')">
-          <span class="mode-icon">🔁</span>
-          <div class="mode-info">
-            <div class="mode-title">Playlist (Auto Loop)</div>
-            <div class="mode-desc">Memutar seluruh foto secara bergantian sesuai durasi</div>
-          </div>
+      <!-- Tab Switcher -->
+      <div class="tab-row">
+        <button id="tab-landscape" class="tab-btn active" onclick="switchTab('landscape')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Landscape
+          <span id="badge-landscape" class="tab-badge">0</span>
         </button>
-
-        <button id="mode-freeze-btn" class="mode-btn" onclick="setPlaybackMode('freeze')">
-          <span class="mode-icon">⏸️</span>
-          <div class="mode-info">
-            <div class="mode-title">Freeze (Foto Tunggal)</div>
-            <div class="mode-desc">Tampilan TV dikunci pada 1 foto tanpa berganti</div>
-          </div>
+        <button id="tab-portrait" class="tab-btn" onclick="switchTab('portrait')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+          Portrait
+          <span id="badge-portrait" class="tab-badge">0</span>
         </button>
       </div>
 
-      <div class="mode-section-title" style="margin-top: 14px;">2. Tampilan Layar (Aspect Ratio & Fit)</div>
-      <div class="mode-options">
-        <button id="fit-contain-btn" class="mode-btn active" onclick="setFitMode('contain')">
-          <span class="mode-icon">🖼️</span>
-          <div class="mode-info">
-            <div class="mode-title">Utuh / Pas Layar (Contain)</div>
-            <div class="mode-desc">Tampilkan foto 100% utuh tanpa ada teks/logo yang terpotong</div>
-          </div>
-        </button>
-
-        <button id="fit-cover-btn" class="mode-btn" onclick="setFitMode('cover')">
-          <span class="mode-icon">✂️</span>
-          <div class="mode-info">
-            <div class="mode-title">Penuh / Potong Layar (Cover)</div>
-            <div class="mode-desc">Mengisi seluruh area layar TV tanpa garis hitam di pinggir</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- Freeze photo selector -->
-      <div id="freezeSelectorArea" class="freeze-select-container" style="display: none;">
-        <span style="font-size: 14px; font-weight: 600; color: var(--warning);">📌 Foto Yang Dikunci:</span>
-        <select id="freezePhotoSelect" class="input-field" style="max-width: 350px;" onchange="onFreezePhotoSelectChange(this.value)">
-          <!-- Dynamic options -->
-        </select>
-      </div>
-    </div>
-
-    <!-- Add Image Form -->
-    <div class="card">
-      <div class="card-title">
-        <span id="form-title">Tambah Foto ke Playlist Landscape</span>
-      </div>
-
-      <!-- Option Switcher: Device File vs Image URL -->
-      <div class="input-type-selector">
-        <button id="type-file-btn" class="type-btn active" onclick="setInputType('file')">📁 Upload File Perangkat (Maks 20MB)</button>
-        <button id="type-url-btn" class="type-btn" onclick="setInputType('url')">🔗 Input Link URL</button>
-      </div>
-
-      <!-- Input Mode 1: File Upload -->
-      <div id="file-input-section">
-        <div id="dropZone" class="upload-box" onclick="document.getElementById('fileInput').click()">
-          <span style="font-size: 36px;">📤</span>
-          <p>Klik atau Drag & Drop file foto di sini dari komputer/HP Anda</p>
-          <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Format: JPG, PNG, WEBP, GIF (Batas Maksimal 20 MB)</p>
-          <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="onFileSelected(event)">
+      <!-- Add Image Panel -->
+      <div class="panel" style="margin-bottom: 20px;">
+        <div class="panel-header">
+          <span class="panel-title">Tambah Foto</span>
+          <span id="form-orientation-label" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;">LANDSCAPE</span>
         </div>
-        <div id="fileNamePreview" class="file-name-preview" style="display:none;"></div>
-      </div>
+        <div class="panel-body">
+          <div class="input-type-tabs">
+            <button id="type-file-btn" class="type-tab active" onclick="setInputType('file')">📁 Upload File</button>
+            <button id="type-url-btn" class="type-tab" onclick="setInputType('url')">🔗 Link URL</button>
+          </div>
 
-      <!-- Input Mode 2: URL -->
-      <div id="url-input-section" style="display:none; margin-bottom: 16px;">
-        <input id="imageUrl" class="input-field" type="url" placeholder="https://contoh.com/foto.jpg">
-      </div>
+          <!-- File Upload -->
+          <div id="file-input-section">
+            <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+              <div class="drop-zone-icon">⬆</div>
+              <div class="drop-zone-text">Klik atau drag foto ke sini</div>
+              <div class="drop-zone-hint">JPG, PNG, WEBP, GIF — Maks 20 MB</div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="onFileSelected(event)">
+            <div id="fileNamePreview" class="file-preview" style="display:none;"></div>
+          </div>
 
-      <!-- Duration & Add Button -->
-      <div class="form-group" style="margin-top: 14px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 14px; color: var(--text-muted);">Durasi (detik):</span>
-          <input id="duration" class="input-field input-duration" type="number" min="1" value="5">
+          <!-- URL Input -->
+          <div id="url-input-section" style="display:none;">
+            <div class="url-input-wrap">
+              <input id="imageUrl" class="form-input" type="url" placeholder="https://contoh.com/foto.jpg">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top:14px;">
+            <span class="form-label">Durasi</span>
+            <input id="duration" class="form-input w-small" type="number" min="1" value="5">
+            <span class="form-label">detik</span>
+            <button class="btn btn-amber" onclick="addImage()" style="margin-left:auto;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
+          </div>
         </div>
-        <button class="btn btn-primary" onclick="addImage()">
-          <span>+ Tambah ke Playlist</span>
-        </button>
       </div>
-      <p class="note">Foto disimpan dalam penyimpanan IndexedDB browser yang mendukung kapasitas besar hingga puluhan MB.</p>
+
+      <!-- Playlist Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title" id="playlist-panel-title">Playlist Landscape</span>
+          <span id="playlist-count" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;">0 item</span>
+        </div>
+        <div class="panel-body" style="padding:14px;">
+          <div id="playlistContainer" class="playlist-list">
+            <!-- Dynamic -->
+          </div>
+          <div class="playlist-footer">
+            <button class="btn btn-amber" onclick="savePlaylist(true)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Simpan
+            </button>
+            <button class="btn btn-danger" onclick="resetPlaylist()">Reset</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Playlist Management -->
-    <div class="card">
-      <div class="card-title">
-        <span id="playlist-title">Daftar Foto Playlist</span>
+    <!-- RIGHT: Sidebar Controls -->
+    <div class="sidebar-col">
+
+      <!-- Playback Mode Panel -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-header">
+          <span class="panel-title">Mode Tayang</span>
+        </div>
+        <div class="panel-body">
+          <div class="mode-section">
+            <div class="mode-label">Mode Putar</div>
+            <div class="mode-options">
+              <div class="mode-opt active" id="mode-playlist-btn" onclick="setPlaybackMode('playlist')">
+                <div class="mode-opt-radio"></div>
+                <div class="mode-opt-content">
+                  <div class="mode-opt-title">Playlist (Auto Loop)</div>
+                  <div class="mode-opt-desc">Putar semua foto berurutan</div>
+                </div>
+              </div>
+              <div class="mode-opt" id="mode-freeze-btn" onclick="setPlaybackMode('freeze')">
+                <div class="mode-opt-radio"></div>
+                <div class="mode-opt-content">
+                  <div class="mode-opt-title">Freeze (Tunggal)</div>
+                  <div class="mode-opt-desc">Tampilkan 1 foto statis</div>
+                </div>
+              </div>
+            </div>
+            <div id="freezeSelectorArea" class="freeze-select-wrap" style="display:none;">
+              <select id="freezePhotoSelect" onchange="onFreezePhotoSelectChange(this.value)"></select>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="playlistContainer" class="playlist-list">
-        <!-- Dynamic list -->
-      </div>
-
-      <div class="form-group" style="margin-top: 24px; border-top: 1px solid var(--card-border); padding-top: 18px;">
-        <button class="btn btn-primary" onclick="savePlaylist(true)">💾 Simpan Perubahan</button>
-        <button class="btn btn-danger" onclick="resetPlaylist()">🔄 Reset Ke Bawaan</button>
-      </div>
     </div>
 
   </div>
@@ -859,25 +1299,22 @@
   <script>
     const KEY_LANDSCAPE = "mysignage_playlist_landscape_v3";
     const KEY_PORTRAIT = "mysignage_playlist_portrait_v3";
-
     const KEY_CONFIG_LANDSCAPE = "mysignage_config_landscape_v3";
     const KEY_CONFIG_PORTRAIT = "mysignage_config_portrait_v3";
-
-    const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+    const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
     const DEFAULT_LANDSCAPE = [
       { type: "image", src: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1920&q=85", duration: 5000, name: "Stock Landscape 1" },
       { type: "image", src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1920&q=85", duration: 5000, name: "Stock Landscape 2" },
       { type: "image", src: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=85", duration: 5000, name: "Stock Landscape 3" }
     ];
-
     const DEFAULT_PORTRAIT = [
       { type: "image", src: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1080&q=85", duration: 5000, name: "Stock Portrait 1" },
       { type: "image", src: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1080&q=85", duration: 5000, name: "Stock Portrait 2" },
       { type: "image", src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&q=85", duration: 5000, name: "Stock Portrait 3" }
     ];
 
-    /* --- INDEXED DB STORAGE ENGINE --- */
+    /* ── IndexedDB ── */
     const DB_NAME = "MySignageDB";
     const DB_VERSION = 1;
     const STORE_NAME = "mysignage_store";
@@ -887,9 +1324,7 @@
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = (e) => {
           const db = e.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME);
-          }
+          if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
@@ -901,24 +1336,15 @@
         const db = await openDB();
         return new Promise((resolve) => {
           const tx = db.transaction(STORE_NAME, "readonly");
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.get(key);
+          const req = tx.objectStore(STORE_NAME).get(key);
           req.onsuccess = () => {
-            if (req.result !== undefined && req.result !== null) {
-              resolve(req.result);
-            } else {
-              try {
-                const ls = JSON.parse(localStorage.getItem(key));
-                if (ls !== null && ls !== undefined) return resolve(ls);
-              } catch(e){}
-              resolve(defaultValue);
-            }
+            if (req.result !== undefined && req.result !== null) resolve(req.result);
+            else { try { const ls = JSON.parse(localStorage.getItem(key)); if (ls !== null) return resolve(ls); } catch(e){} }
+            resolve(defaultValue);
           };
           req.onerror = () => resolve(defaultValue);
         });
-      } catch (e) {
-        return defaultValue;
-      }
+      } catch (e) { return defaultValue; }
     }
 
     async function setDBItem(key, value) {
@@ -926,59 +1352,47 @@
         const db = await openDB();
         return new Promise((resolve, reject) => {
           const tx = db.transaction(STORE_NAME, "readwrite");
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.put(value, key);
+          const req = tx.objectStore(STORE_NAME).put(value, key);
           req.onsuccess = () => resolve(true);
           req.onerror = () => reject(req.error);
         });
-      } catch (e) {
-        console.error("IndexedDB set error:", e);
-      }
+      } catch (e) { console.error("IndexedDB set error:", e); }
     }
 
     async function removeDBItem(key) {
-      try {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).delete(key);
-      } catch (e) {}
+      try { const db = await openDB(); const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).delete(key); } catch(e){}
       try { localStorage.removeItem(key); } catch(e){}
     }
 
-    // BroadcastChannel sync
     const syncChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("mysignage_sync") : null;
     function notifySync(key) {
-      if (syncChannel) {
-        syncChannel.postMessage({ key, timestamp: Date.now() });
-      }
+      if (syncChannel) syncChannel.postMessage({ key, timestamp: Date.now() });
       try { localStorage.setItem("mysignage_ping", Date.now()); } catch(e){}
     }
 
+    /* ── State ── */
     let currentMode = "landscape";
     let inputType = "file";
     let loadedFileData = null;
     let loadedFileName = "";
     let loadedFileObj = null;
 
-    let playlists = {
-      landscape: [...DEFAULT_LANDSCAPE],
-      portrait: [...DEFAULT_PORTRAIT]
-    };
-
+    let playlists = { landscape: [...DEFAULT_LANDSCAPE], portrait: [...DEFAULT_PORTRAIT] };
     let configs = {
-      landscape: { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" },
-      portrait: { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" }
+      landscape: { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" },
+      portrait: { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" }
     };
 
+    /* ── Supabase UI ── */
     function updateSupabaseStatusUI() {
       const dot = document.getElementById("supabaseStatusDot");
       const text = document.getElementById("supabaseStatusText");
       if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
-        if (dot) dot.textContent = "🟢";
-        if (text) text.textContent = "Supabase Terhubung";
+        if (dot) dot.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="#10b981" stroke="none"><circle cx="12" cy="12" r="10"/></svg>';
+        if (text) text.textContent = "Cloud ON";
       } else {
-        if (dot) dot.textContent = "🔴";
-        if (text) text.textContent = "Cloud Supabase (Offline)";
+        if (dot) dot.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="#71717a" stroke="none"><circle cx="12" cy="12" r="10"/></svg>';
+        if (text) text.textContent = "Cloud";
       }
     }
 
@@ -1002,105 +1416,61 @@
         updateSupabaseStatusUI();
         closeSupabaseModal();
         if (u && k) {
-          showToast("Kredensial Disimpan ☁️", "Mencoba memuat data dari Supabase Cloud...", "info");
+          showToast("Koneksi Cloud Disimpan", "Memuat data dari Supabase...", "info");
           await initStorage();
-          showToast("Berhasil Terhubung ✨", "MySignage siap beroperasi dengan Supabase Cloud!", "success");
+          showToast("Berhasil Terhubung", "Playlist tersinkron ke semua perangkat.", "success");
         } else {
-          showToast("Kredensial Dihapus", "MySignage beralih ke IndexedDB Penyimpanan Lokal.", "info");
+          showToast("Cloud Dimatikan", "Beralih ke penyimpanan lokal.", "info");
         }
       }
     }
 
     async function initStorage() {
       updateSupabaseStatusUI();
-
-      let cloudLandscape = null;
-      let cloudPortrait = null;
-      let cfgLandscape = null;
-      let cfgPortrait = null;
-
+      let cloudLandscape = null, cloudPortrait = null, cfgLandscape = null, cfgPortrait = null;
       if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
         try {
           cloudLandscape = await window.MySignageSupabase.fetchPlaylistCloud("landscape", null);
           cloudPortrait = await window.MySignageSupabase.fetchPlaylistCloud("portrait", null);
           cfgLandscape = await window.MySignageSupabase.fetchConfigCloud("landscape", null);
           cfgPortrait = await window.MySignageSupabase.fetchConfigCloud("portrait", null);
-        } catch(e) {
-          console.warn("Supabase initial fetch warning:", e);
-        }
+        } catch(e) { console.warn("Supabase fetch warning:", e); }
       }
-
-      const localLandscape = await getDBItem(KEY_LANDSCAPE, DEFAULT_LANDSCAPE);
-      const localPortrait = await getDBItem(KEY_PORTRAIT, DEFAULT_PORTRAIT);
-      const localCfgL = await getDBItem(KEY_CONFIG_LANDSCAPE, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
-      const localCfgP = await getDBItem(KEY_CONFIG_PORTRAIT, { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" });
-
-      playlists.landscape = Array.isArray(cloudLandscape) && cloudLandscape.length ? cloudLandscape : localLandscape;
-      playlists.portrait = Array.isArray(cloudPortrait) && cloudPortrait.length ? cloudPortrait : localPortrait;
-
+      const localL = await getDBItem(KEY_LANDSCAPE, DEFAULT_LANDSCAPE);
+      const localP = await getDBItem(KEY_PORTRAIT, DEFAULT_PORTRAIT);
+      const localCfgL = await getDBItem(KEY_CONFIG_LANDSCAPE, { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" });
+      const localCfgP = await getDBItem(KEY_CONFIG_PORTRAIT, { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" });
+      playlists.landscape = Array.isArray(cloudLandscape) && cloudLandscape.length ? cloudLandscape : localL;
+      playlists.portrait = Array.isArray(cloudPortrait) && cloudPortrait.length ? cloudPortrait : localP;
       configs.landscape = (cfgLandscape && typeof cfgLandscape === "object") ? cfgLandscape : localCfgL;
       configs.portrait = (cfgPortrait && typeof cfgPortrait === "object") ? cfgPortrait : localCfgP;
-
       switchTab("landscape");
     }
 
-    /* --- TOAST NOTIFICATIONS SYSTEM --- */
+    /* ── Toast ── */
     function showToast(title, desc = "", type = "success", duration = 3000) {
       const container = document.getElementById("toastContainer");
       const toast = document.createElement("div");
       toast.className = `toast ${type}`;
-
-      const icons = {
-        success: "✓",
-        danger: "✕",
-        warning: "⚠️",
-        info: "ℹ️"
-      };
-
-      toast.innerHTML = `
-        <div class="toast-icon">${icons[type] || "ℹ️"}</div>
-        <div class="toast-body">
-          <div class="toast-title">${esc(title)}</div>
-          ${desc ? `<div class="toast-desc">${esc(desc)}</div>` : ""}
-        </div>
-      `;
-
+      const icons = { success: "✓", danger: "✕", warning: "!", info: "ℹ" };
+      toast.innerHTML = `<div class="toast-icon">${icons[type] || "ℹ"}</div><div class="toast-body"><div class="toast-title">${esc(title)}</div>${desc ? `<div class="toast-desc">${esc(desc)}</div>` : ""}</div>`;
       container.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.add("show");
-      });
-
-      setTimeout(() => {
-        toast.classList.remove("show");
-        setTimeout(() => toast.remove(), 400);
-      }, duration);
+      requestAnimationFrame(() => toast.classList.add("show"));
+      setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, duration);
     }
 
-    /* --- CUSTOM MODALS SYSTEM --- */
+    /* ── Modals ── */
     function showConfirmModal(title, desc, onConfirm, confirmText = "Ya, Lanjutkan") {
       const modal = document.getElementById("customModal");
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalDesc").textContent = desc;
       document.getElementById("modalInputContainer").style.display = "none";
-      
-      const confirmBtn = document.getElementById("modalConfirmBtn");
-      confirmBtn.textContent = confirmText;
-      confirmBtn.className = "btn btn-primary";
-
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = confirmText;
+      btn.className = "btn btn-amber";
       modal.classList.add("active");
-
-      const cleanup = () => {
-        modal.classList.remove("active");
-        confirmBtn.onclick = null;
-        document.getElementById("modalCancelBtn").onclick = null;
-      };
-
-      confirmBtn.onclick = () => {
-        cleanup();
-        onConfirm();
-      };
-
+      const cleanup = () => { modal.classList.remove("active"); btn.onclick = null; document.getElementById("modalCancelBtn").onclick = null; };
+      btn.onclick = () => { cleanup(); onConfirm(); };
       document.getElementById("modalCancelBtn").onclick = cleanup;
     }
 
@@ -1108,77 +1478,46 @@
       const modal = document.getElementById("customModal");
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalDesc").textContent = desc;
-      
-      const inputContainer = document.getElementById("modalInputContainer");
-      const input = document.getElementById("modalInput");
-      inputContainer.style.display = "block";
-      input.value = defaultValue;
-
-      const confirmBtn = document.getElementById("modalConfirmBtn");
-      confirmBtn.textContent = "Simpan";
-      confirmBtn.className = "btn btn-primary";
-
+      const inp = document.getElementById("modalInput");
+      document.getElementById("modalInputContainer").style.display = "block";
+      inp.value = defaultValue;
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = "Simpan";
+      btn.className = "btn btn-amber";
       modal.classList.add("active");
-      setTimeout(() => input.focus(), 100);
-
-      const cleanup = () => {
-        modal.classList.remove("active");
-        confirmBtn.onclick = null;
-        document.getElementById("modalCancelBtn").onclick = null;
-      };
-
-      confirmBtn.onclick = () => {
-        const val = input.value;
-        cleanup();
-        onSubmit(val);
-      };
-
+      setTimeout(() => inp.focus(), 100);
+      const cleanup = () => { modal.classList.remove("active"); btn.onclick = null; document.getElementById("modalCancelBtn").onclick = null; };
+      btn.onclick = () => { cleanup(); onSubmit(inp.value); };
       document.getElementById("modalCancelBtn").onclick = cleanup;
     }
 
+    /* ── Core Logic ── */
     function switchTab(mode) {
       currentMode = mode;
       document.getElementById("tab-landscape").classList.toggle("active", mode === "landscape");
       document.getElementById("tab-portrait").classList.toggle("active", mode === "portrait");
-      
-      const label = mode === "landscape" ? "Landscape (Horizontal)" : "Portrait (Vertikal)";
-      document.getElementById("form-title").textContent = `Tambah Foto ke Playlist ${label}`;
-      document.getElementById("playlist-title").textContent = `Daftar Foto Playlist ${label}`;
-      document.getElementById("mode-orientation-label").textContent = label;
-
+      const label = mode === "landscape" ? "LANDSCAPE" : "PORTRAIT";
+      document.getElementById("form-orientation-label").textContent = label;
+      document.getElementById("playlist-panel-title").textContent = `Playlist ${label}`;
       updateModeUI();
       render();
     }
 
     function updateModeUI() {
       const cfg = configs[currentMode];
-      const isFreeze = cfg.playbackMode === "freeze";
-      const fitMode = cfg.imageFit || "contain";
-
-      document.getElementById("mode-playlist-btn").classList.toggle("active", !isFreeze);
-      document.getElementById("mode-freeze-btn").classList.toggle("active", isFreeze);
-
-      document.getElementById("fit-contain-btn").classList.toggle("active", fitMode === "contain");
-      document.getElementById("fit-cover-btn").classList.toggle("active", fitMode === "cover");
-
-      document.getElementById("freezeSelectorArea").style.display = isFreeze ? "flex" : "none";
-
-      const select = document.getElementById("freezePhotoSelect");
-      select.innerHTML = "";
+      document.getElementById("mode-playlist-btn").classList.toggle("active", cfg.playbackMode !== "freeze");
+      document.getElementById("mode-freeze-btn").classList.toggle("active", cfg.playbackMode === "freeze");
+      document.getElementById("freezeSelectorArea").style.display = cfg.playbackMode === "freeze" ? "block" : "none";
+      const sel = document.getElementById("freezePhotoSelect");
+      sel.innerHTML = "";
       const list = playlists[currentMode];
-
-      if (!list.length) {
-        select.innerHTML = `<option value="0">TIDAK ADA FOTO</option>`;
-        return;
-      }
-
+      if (!list.length) { sel.innerHTML = `<option>Tidak ada foto</option>`; return; }
       list.forEach((item, idx) => {
         const opt = document.createElement("option");
         opt.value = idx;
-        const name = item.name || item.src;
-        opt.textContent = `Foto #${idx + 1}: ${name.substring(0, 40)}`;
+        opt.textContent = `#${idx + 1} — ${(item.name || item.src).substring(0, 35)}`;
         if (idx === cfg.freezeIndex) opt.selected = true;
-        select.appendChild(opt);
+        sel.appendChild(opt);
       });
     }
 
@@ -1187,32 +1526,14 @@
       updateModeUI();
       render();
       savePlaylist(false);
-
-      if (mode === "freeze") {
-        showToast("Mode Freeze Aktif ⏸️", "Tampilan TV dikunci pada 1 foto saja.", "info");
-      } else {
-        showToast("Mode Playlist Aktif 🔁", "Tampilan TV akan memutar foto berurutan.", "success");
-      }
-    }
-
-    function setFitMode(fit) {
-      configs[currentMode].imageFit = fit;
-      updateModeUI();
-      render();
-      savePlaylist(false);
-
-      if (fit === "contain") {
-        showToast("Tampilan Utuh (Contain) 🖼️", "Foto akan ditampilkan 100% utuh tanpa terpotong.", "success");
-      } else {
-        showToast("Tampilan Penuh (Cover) ✂️", "Foto mengisi seluruh area layar TV.", "info");
-      }
+      showToast(mode === "freeze" ? "Mode Freeze Aktif" : "Mode Playlist Aktif", mode === "freeze" ? "TV menampilkan 1 foto statis" : "TV memutar semua foto berurutan", mode === "freeze" ? "info" : "success");
     }
 
     function onFreezePhotoSelectChange(val) {
       configs[currentMode].freezeIndex = Number(val) || 0;
       render();
       savePlaylist(false);
-      showToast("Foto Dikunci Diperbarui 📌", `Layar TV dikunci pada Foto #${Number(val) + 1}`, "info");
+      showToast("Foto Dikunci", `TV dikunci pada foto #${Number(val) + 1}`, "info");
     }
 
     function freezeSpecificItem(idx) {
@@ -1221,97 +1542,49 @@
       updateModeUI();
       render();
       savePlaylist(true);
-      showToast("Foto Berhasil Dikunci 📌", `Foto #${idx + 1} dipilih sebagai tampilan tunggal di TV.`, "info");
+      showToast("Foto Dikunci 📌", `Foto #${idx + 1} ditampilkan statis di TV`, "info");
     }
 
     function setInputType(type) {
       inputType = type;
       document.getElementById("type-file-btn").classList.toggle("active", type === "file");
       document.getElementById("type-url-btn").classList.toggle("active", type === "url");
-      
       document.getElementById("file-input-section").style.display = type === "file" ? "block" : "none";
       document.getElementById("url-input-section").style.display = type === "url" ? "block" : "none";
     }
 
-    // Drag and Drop File Handlers
     const dropZone = document.getElementById("dropZone");
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropZone.classList.add("dragover");
-      }, false);
-    });
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("dragover");
-      }, false);
-    });
-    dropZone.addEventListener("drop", (e) => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files && files.length) {
-        processFile(files[0]);
-      }
-    });
+    ['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add("dragover"); }, false));
+    ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove("dragover"); }, false));
+    dropZone.addEventListener("drop", e => { const files = e.dataTransfer.files; if (files?.length) processFile(files[0]); });
 
-    function onFileSelected(event) {
-      const file = event.target.files[0];
-      if (file) processFile(file);
-    }
+    function onFileSelected(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
 
-    /* Compress Image if needed & handle 20MB limit */
     function processFile(file) {
-      if (!file.type.startsWith("image/")) {
-        showToast("File Tidak Valid ⚠️", "Mohon pilih file berformat gambar (JPG, PNG, WEBP, GIF).", "warning");
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        showToast("Ukuran File Melebihi 20MB ⚠️", `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)} MB) melebih batas 20 MB.`, "danger", 5000);
-        return;
-      }
-
+      if (!file.type.startsWith("image/")) { showToast("Format Salah", "Pilih file gambar (JPG, PNG, WEBP, GIF).", "warning"); return; }
+      if (file.size > MAX_FILE_SIZE_BYTES) { showToast("File Terlalu Besar", `Ukuran ${(file.size/(1024*1024)).toFixed(1)} MB melebihi batas 20 MB.`, "danger", 5000); return; }
       loadedFileName = file.name;
       loadedFileObj = file;
-
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const img = new Image();
         img.onload = () => {
-          const maxDimension = 2560; // 4K max target
-          let width = img.width;
-          let height = img.height;
-
-          if (width > maxDimension || height > maxDimension) {
-            if (width > height) {
-              height = Math.round((height * maxDimension) / width);
-              width = maxDimension;
-            } else {
-              width = Math.round((width * maxDimension) / height);
-              height = maxDimension;
-            }
-          }
-
+          const maxDim = 2560; let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) { if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; } else { w = Math.round(w * maxDim / h); h = maxDim; } }
           const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
-          loadedFileData = canvas.toDataURL(mimeType, 0.90);
-
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          loadedFileData = canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.90);
           const preview = document.getElementById("fileNamePreview");
-          preview.style.display = "block";
-          preview.textContent = `✓ Ready: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-          showToast("File Siap Ditambahkan 📁", `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`, "info");
+          preview.style.display = "flex";
+          preview.textContent = `✓ ${file.name}  —  ${(file.size/(1024*1024)).toFixed(2)} MB`;
+          showToast("Siap Ditambahkan", file.name, "info");
         };
         img.onerror = () => {
           loadedFileData = e.target.result;
           const preview = document.getElementById("fileNamePreview");
-          preview.style.display = "block";
-          preview.textContent = `✓ Ready: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+          preview.style.display = "flex";
+          preview.textContent = `✓ ${file.name}  —  ${(file.size/(1024*1024)).toFixed(2)} MB`;
         };
         img.src = e.target.result;
       };
@@ -1320,246 +1593,278 @@
 
     async function addImage() {
       const sec = Math.max(Number(document.getElementById("duration").value) || 5, 1);
-      let imgSrc = "";
-      let displayName = "";
-
+      let imgSrc = "", displayName = "";
       if (inputType === "file") {
-        if (!loadedFileData && !loadedFileObj) {
-          showToast("File Belum Dipilih ⚠️", "Silakan klik atau drag foto dari perangkat Anda.", "warning");
-          return;
-        }
-
+        if (!loadedFileData && !loadedFileObj) { showToast("Belum Ada File", "Pilih foto dari perangkat Anda.", "warning"); return; }
         if (window.MySignageSupabase && window.MySignageSupabase.isConfigured() && loadedFileObj) {
-          showToast("Mengunggah Foto ke Cloud... ☁️", "Mohon tunggu sejenak.", "info", 5000);
-          try {
-            imgSrc = await window.MySignageSupabase.uploadImageFileCloud(loadedFileObj);
-            displayName = loadedFileName || "Foto Cloud";
-          } catch(err) {
-            showToast("Gagal Upload ke Cloud ⚠️", err.message, "danger", 6000);
-            return;
-          }
-        } else {
-          imgSrc = loadedFileData;
-          displayName = loadedFileName || "File Lokal";
-        }
+          showToast("Mengunggah...", "Mohon tunggu sebentar.", "info", 5000);
+          try { imgSrc = await window.MySignageSupabase.uploadImageFileCloud(loadedFileObj); displayName = loadedFileName || "Foto Cloud"; }
+          catch(err) { showToast("Upload Gagal", err.message, "danger", 6000); return; }
+        } else { imgSrc = loadedFileData; displayName = loadedFileName || "File Lokal"; }
       } else {
         imgSrc = document.getElementById("imageUrl").value.trim();
-        if (!imgSrc) {
-          showToast("URL Belum Diisi ⚠️", "Silakan masukkan link URL gambar.", "warning");
-          return;
-        }
+        if (!imgSrc) { showToast("URL Kosong", "Masukkan link gambar.", "warning"); return; }
         displayName = imgSrc;
       }
-
-      playlists[currentMode].push({
-        type: "image",
-        src: imgSrc,
-        duration: sec * 1000,
-        name: displayName
-      });
-
-      // Reset form
+      playlists[currentMode].push({ type: "image", src: imgSrc, duration: sec * 1000, name: displayName });
       document.getElementById("fileInput").value = "";
       document.getElementById("imageUrl").value = "";
       document.getElementById("fileNamePreview").style.display = "none";
-      loadedFileData = null;
-      loadedFileName = "";
-      loadedFileObj = null;
-
+      loadedFileData = null; loadedFileName = ""; loadedFileObj = null;
       updateModeUI();
       render();
       await savePlaylist(false);
-      showToast("Foto Berhasil Ditambahkan ✨", `${displayName.substring(0, 35)} (${sec} Detik)`, "success");
+      showToast("Foto Ditambahkan ✨", `${displayName.substring(0, 30)}  —  ${sec}s`, "success");
     }
 
     function del(index) {
-      showConfirmModal(
-        "Hapus Foto?",
-        `Apakah Anda yakin ingin menghapus foto #${index + 1}?`,
-        async () => {
-          playlists[currentMode].splice(index, 1);
-          if (configs[currentMode].freezeIndex >= playlists[currentMode].length) {
-            configs[currentMode].freezeIndex = Math.max(0, playlists[currentMode].length - 1);
-          }
-          updateModeUI();
-          render();
-          await savePlaylist(false);
-          showToast("Foto Dihapus 🗑️", `Foto #${index + 1} berhasil dihapus.`, "info");
-        }
-      );
+      showConfirmModal("Hapus Foto?", `Hapus foto #${index + 1} dari playlist?`, async () => {
+        playlists[currentMode].splice(index, 1);
+        if (configs[currentMode].freezeIndex >= playlists[currentMode].length) configs[currentMode].freezeIndex = Math.max(0, playlists[currentMode].length - 1);
+        updateModeUI(); render(); await savePlaylist(false);
+        showToast("Foto Dihapus", `#${index + 1} berhasil dihapus.`, "info");
+      });
     }
 
     async function up(index) {
       if (index <= 0) return;
       const list = playlists[currentMode];
-      [list[index - 1], list[index]] = [list[index], list[index - 1]];
-      
+      [list[index-1], list[index]] = [list[index], list[index-1]];
       if (configs[currentMode].freezeIndex === index) configs[currentMode].freezeIndex = index - 1;
       else if (configs[currentMode].freezeIndex === index - 1) configs[currentMode].freezeIndex = index;
-
-      updateModeUI();
-      render();
-      await savePlaylist(false);
-      showToast("Urutan Diperbarui ⬆️", `Foto dipindahkan ke posisi #${index}`, "info");
+      updateModeUI(); render(); await savePlaylist(false);
+      showToast("Diubah Urutannya", `Foto #${index + 1} pindah ke posisi #${index}`, "info");
     }
 
     async function down(index) {
       const list = playlists[currentMode];
       if (index >= list.length - 1) return;
-      [list[index + 1], list[index]] = [list[index], list[index + 1]];
-
+      [list[index+1], list[index]] = [list[index], list[index+1]];
       if (configs[currentMode].freezeIndex === index) configs[currentMode].freezeIndex = index + 1;
       else if (configs[currentMode].freezeIndex === index + 1) configs[currentMode].freezeIndex = index;
-
-      updateModeUI();
-      render();
-      await savePlaylist(false);
-      showToast("Urutan Diperbarui ⬇️", `Foto dipindahkan ke posisi #${index + 2}`, "info");
+      updateModeUI(); render(); await savePlaylist(false);
+      showToast("Diubah Urutannya", `Foto #${index + 1} pindah ke posisi #${index + 2}`, "info");
     }
 
     function changeDuration(index) {
-      const list = playlists[currentMode];
-      const sec = list[index].duration / 1000;
-      
-      showPromptModal(
-        "Ubah Durasi Tayang",
-        `Masukkan durasi tayang dalam detik untuk Foto #${index + 1}:`,
-        sec,
-        async (inputVal) => {
-          if (inputVal === null) return;
-          const newSec = Math.max(Number(inputVal) || 5, 1);
-          list[index].duration = newSec * 1000;
-          render();
-          await savePlaylist(false);
-          showToast("Durasi Diperbarui ⏱️", `Durasi Foto #${index + 1} diubah menjadi ${newSec} detik.`, "success");
-        }
-      );
+      const sec = playlists[currentMode][index].duration / 1000;
+      showPromptModal("Ubah Durasi", `Durasi saat ini: ${sec} detik untuk Foto #${index + 1}.`, sec, async val => {
+        if (val === null) return;
+        const newSec = Math.max(Number(val) || 5, 1);
+        playlists[currentMode][index].duration = newSec * 1000;
+        render(); await savePlaylist(false);
+        showToast("Durasi Diperbarui", `Foto #${index + 1}: ${newSec} detik`, "success");
+      });
     }
 
     async function savePlaylist(showToastNotification) {
       const pKey = currentMode === "landscape" ? KEY_LANDSCAPE : KEY_PORTRAIT;
       const cKey = currentMode === "landscape" ? KEY_CONFIG_LANDSCAPE : KEY_CONFIG_PORTRAIT;
-      
-      try {
-        await setDBItem(pKey, playlists[currentMode]);
-        await setDBItem(cKey, configs[currentMode]);
-        notifySync(pKey);
-      } catch (e) {
-        showToast("Gagal Menyimpan ⚠️", "Terjadi kesalahan saat menyimpan data ke IndexedDB.", "danger", 5000);
-        return;
-      }
-
+      try { await setDBItem(pKey, playlists[currentMode]); await setDBItem(cKey, configs[currentMode]); notifySync(pKey); }
+      catch (e) { showToast("Gagal Menyimpan", "Error IndexedDB.", "danger", 5000); return; }
       let cloudSaved = false;
       if (window.MySignageSupabase && window.MySignageSupabase.isConfigured()) {
         try {
           const pOk = await window.MySignageSupabase.savePlaylistCloud(currentMode, playlists[currentMode]);
           const cOk = await window.MySignageSupabase.saveConfigCloud(currentMode, configs[currentMode]);
           cloudSaved = pOk && cOk;
-        } catch(e) {
-          console.warn("Cloud save error:", e);
-        }
+        } catch(e) { console.warn("Cloud save error:", e); }
       }
-
       updateBadges();
-
       if (showToastNotification) {
         const label = currentMode === "landscape" ? "Landscape" : "Portrait";
-        if (cloudSaved) {
-          showToast("Tersimpan di Cloud! ☁️✨", `Playlist ${label} berhasil disinkronkan ke Supabase & semua TV.`, "success");
-        } else {
-          showToast("Perubahan Tersimpan! 💾", `Playlist ${label} tersimpan di IndexedDB & disinkronkan ke TV.`, "success");
-        }
+        showToast(cloudSaved ? "Tersimpan di Cloud ☁️" : "Perubahan Tersimpan 💾", `Playlist ${label} berhasil disimpan.`, "success");
       }
     }
 
     function resetPlaylist() {
       const label = currentMode === "landscape" ? "Landscape" : "Portrait";
-      showConfirmModal(
-        "Reset Playlist ke Bawaan?",
-        `Semua foto dan konfigurasi playlist ${label} akan dikembalikan ke contoh bawaan.`,
-        async () => {
-          const pKey = currentMode === "landscape" ? KEY_LANDSCAPE : KEY_PORTRAIT;
-          const cKey = currentMode === "landscape" ? KEY_CONFIG_LANDSCAPE : KEY_CONFIG_PORTRAIT;
-          const defaultData = currentMode === "landscape" ? DEFAULT_LANDSCAPE : DEFAULT_PORTRAIT;
-
-          await removeDBItem(pKey);
-          await removeDBItem(cKey);
-
-          playlists[currentMode] = [...defaultData];
-          configs[currentMode] = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
-
-          updateModeUI();
-          render();
-          await savePlaylist(false);
-          showToast("Playlist Direset 🔄", `Playlist ${label} berhasil dikembalikan ke contoh bawaan.`, "info");
-        }
-      );
+      showConfirmModal("Reset Playlist?", `Playlist ${label} akan dikembalikan ke pengaturan bawaan. Semua foto Anda akan hilang.`, async () => {
+        await removeDBItem(currentMode === "landscape" ? KEY_LANDSCAPE : KEY_PORTRAIT);
+        await removeDBItem(currentMode === "landscape" ? KEY_CONFIG_LANDSCAPE : KEY_CONFIG_PORTRAIT);
+        const def = currentMode === "landscape" ? DEFAULT_LANDSCAPE : DEFAULT_PORTRAIT;
+        playlists[currentMode] = [...def];
+        configs[currentMode] = { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" };
+        updateModeUI(); render(); await savePlaylist(false);
+        showToast("Playlist Direset", `${label} kembali ke pengaturan awal.`, "info");
+      }, "Ya, Reset");
     }
 
     function updateBadges() {
       document.getElementById("badge-landscape").textContent = playlists.landscape.length;
       document.getElementById("badge-portrait").textContent = playlists.portrait.length;
+      document.getElementById("playlist-count").textContent = `${playlists[currentMode].length} item`;
     }
 
-    function esc(v) {
-      return String(v).replace(/[&<>"']/g, c => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-      }[c]));
-    }
+    function esc(v) { return String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c])); }
 
     function render() {
       const container = document.getElementById("playlistContainer");
       container.innerHTML = "";
-
       const activeList = playlists[currentMode];
       const cfg = configs[currentMode];
-      const isFreezeMode = cfg.playbackMode === "freeze";
-
+      const isFreeze = cfg.playbackMode === "freeze";
       updateBadges();
-
       if (!activeList.length) {
-        container.innerHTML = `<p class="note" style="text-align: center; padding: 24px;">Belum ada foto dalam playlist ini. Tambahkan foto di atas.</p>`;
+        container.innerHTML = `<div class="playlist-empty"><div class="playlist-empty-icon">📭</div>Playlist kosong.<br>Tambahkan foto di atas.</div>`;
         return;
       }
-
-      const thumbClass = currentMode === "landscape" ? "thumb-landscape" : "thumb-portrait";
-
       activeList.forEach((item, index) => {
         const div = document.createElement("div");
-        const isThisFrozen = isFreezeMode && index === cfg.freezeIndex;
-        div.className = `playlist-item ${isThisFrozen ? "is-frozen" : ""}`;
-
-        const isDataUrl = item.src && item.src.startsWith("data:");
-        const displayLabel = item.name || item.src;
-        const sourceBadge = isDataUrl ? "📁 File Lokal" : "🔗 URL";
-
+        const isFrozen = isFreeze && index === cfg.freezeIndex;
+        div.className = `playlist-item${isFrozen ? " frozen" : ""}`;
+        const isDataUrl = item.src?.startsWith("data:");
         div.innerHTML = `
-          <div class="thumb-wrapper ${thumbClass}">
-            <img class="thumb-img" src="${esc(item.src)}" onerror="this.src='https://via.placeholder.com/150?text=Error'">
-          </div>
+          <div class="item-thumb"><img src="${esc(item.src)}" onerror="this.src='https://via.placeholder.com/64x38?text=ERR'"></div>
           <div class="item-info">
-            <div class="item-url">${index + 1}. ${esc(displayLabel)}</div>
+            <div class="item-name">${index + 1}. ${esc(item.name || item.src)}</div>
             <div class="item-meta">
-              <span>⏱️ ${(Number(item.duration) || 5000) / 1000} Detik</span>
-              <span>${sourceBadge}</span>
-              ${isThisFrozen ? `<span class="freeze-badge">📌 DIKUNCI (FREEZE)</span>` : ""}
+              <span>⏱ ${(Number(item.duration) || 5000) / 1000}s</span>
+              <span class="source-tag">${isDataUrl ? "LOKAL" : "URL"}</span>
+              ${isFrozen ? `<span class="freeze-tag">BEKUKA</span>` : ""}
             </div>
           </div>
           <div class="item-actions">
-            <button class="icon-btn freeze-btn" onclick="freezeSpecificItem(${index})" title="Freeze Foto Ini">📌 Freeze</button>
-            <button class="icon-btn" onclick="up(${index})" title="Pindah Atas">↑</button>
-            <button class="icon-btn" onclick="down(${index})" title="Pindah Bawah">↓</button>
-            <button class="icon-btn" onclick="changeDuration(${index})" title="Ubah Durasi">⏱️</button>
-            <button class="icon-btn delete" onclick="del(${index})" title="Hapus">🗑️</button>
+            <button class="icon-btn freeze-btn" onclick="freezeSpecificItem(${index})" title="Bekukan">📌</button>
+            <button class="icon-btn" onclick="up(${index})" title="Naik">↑</button>
+            <button class="icon-btn" onclick="down(${index})" title="Turun">↓</button>
+            <button class="icon-btn" onclick="changeDuration(${index})" title="Ubah Durasi">⏱</button>
+            <button class="icon-btn delete" onclick="del(${index})" title="Hapus">✕</button>
           </div>
         `;
-
         container.appendChild(div);
       });
     }
 
-    // Initialize Storage
-    initStorage();
+    /* ── AUTH MODULE ── */
+    const AUTH_KEYS = {
+      PW_HASH: "mysignage_admin_pw_hash",
+      MUST_CHANGE: "mysignage_admin_must_change",
+      AUTHED: "mysignage_admin_authed"
+    };
+    const DEFAULT_PASSWORD = "12345678";
+
+    async function sha256(text) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function checkAuthState() {
+      const authed = localStorage.getItem(AUTH_KEYS.AUTHED) === "true";
+      const mustChange = localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true";
+      return { authed, mustChange };
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const pw = document.getElementById("authPassword").value;
+      const btn = document.getElementById("authSubmitBtn");
+      const errEl = document.getElementById("authError");
+      errEl.style.display = "none";
+      btn.disabled = true;
+      document.querySelector(".auth-btn-text").style.display = "none";
+      document.querySelector(".auth-btn-spinner").style.display = "inline";
+      try {
+        const inputHash = await sha256(pw);
+        const storedHash = localStorage.getItem(AUTH_KEYS.PW_HASH);
+        if (!storedHash) {
+          // First-time setup: store default and mark mustChange
+          localStorage.setItem(AUTH_KEYS.PW_HASH, inputHash);
+          localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "true");
+          localStorage.setItem(AUTH_KEYS.AUTHED, "true");
+          showChangePwModal();
+        } else if (inputHash === storedHash) {
+          const mustChange = localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true";
+          localStorage.setItem(AUTH_KEYS.AUTHED, "true");
+          if (mustChange) {
+            showChangePwModal();
+          } else {
+            dismissAuthGate();
+          }
+        } else {
+          throw new Error("Password salah. Silakan coba lagi.");
+        }
+      } catch (err) {
+        errEl.textContent = "✕ " + err.message;
+        errEl.style.display = "flex";
+      } finally {
+        btn.disabled = false;
+        document.querySelector(".auth-btn-text").style.display = "inline";
+        document.querySelector(".auth-btn-spinner").style.display = "none";
+      }
+      return false;
+    }
+
+    function dismissAuthGate() {
+      document.getElementById("authGate").classList.add("hidden");
+      document.body.style.overflow = "";
+      initStorage();
+    }
+
+    function showChangePwModal() {
+      document.getElementById("newPwInput").value = "";
+      document.getElementById("confirmPwInput").value = "";
+      document.getElementById("changePwError").style.display = "none";
+      document.getElementById("changePwModal").classList.add("active");
+      setTimeout(() => document.getElementById("newPwInput").focus(), 100);
+    }
+
+    function closeChangePwModal() {
+      document.getElementById("changePwModal").classList.remove("active");
+    }
+
+    async function submitChangePw() {
+      const newPw = document.getElementById("newPwInput").value;
+      const confirmPw = document.getElementById("confirmPwInput").value;
+      const errEl = document.getElementById("changePwError");
+      errEl.style.display = "none";
+      if (newPw.length < 6) {
+        errEl.textContent = "✕ Password minimal 6 karakter.";
+        errEl.style.display = "flex";
+        return;
+      }
+      if (newPw !== confirmPw) {
+        errEl.textContent = "✕ Konfirmasi password tidak cocok.";
+        errEl.style.display = "flex";
+        return;
+      }
+      const hash = await sha256(newPw);
+      localStorage.setItem(AUTH_KEYS.PW_HASH, hash);
+      localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "false");
+      closeChangePwModal();
+      dismissAuthGate();
+      showToast("Password Diubah", "Password berhasil diubah. Selamat datang!", "success");
+    }
+
+    function toggleAuthPassword() {
+      const inp = document.getElementById("authPassword");
+      inp.type = inp.type === "password" ? "text" : "password";
+    }
+
+    function handleLogout() {
+      localStorage.removeItem(AUTH_KEYS.AUTHED);
+      document.getElementById("authGate").classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+      document.getElementById("authPassword").value = "";
+      document.getElementById("authError").style.display = "none";
+      document.getElementById("authPassword").focus();
+      showToast("LogOut", "Anda telah keluar dari admin.", "info");
+    }
+
+    // ── INIT AUTH ──
+    (function initAuth() {
+      document.body.style.overflow = "hidden";
+      const { authed, mustChange } = checkAuthState();
+      if (!authed || mustChange) {
+        document.getElementById("authGate").classList.remove("hidden");
+        document.getElementById("authPassword").focus();
+      } else {
+        dismissAuthGate();
+      }
+    })();
   </script>
 </body>
 </html>

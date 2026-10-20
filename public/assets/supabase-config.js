@@ -110,7 +110,7 @@
         return {
           playbackMode: data.playback_mode || "playlist",
           freezeIndex: Number(data.freeze_index) || 0,
-          imageFit: data.image_fit || "contain"
+          imageFit: data.image_fit || "cover"
         };
       }
     } catch (e) {
@@ -130,7 +130,7 @@
           id: mode,
           playback_mode: configObj.playbackMode || "playlist",
           freeze_index: Number(configObj.freezeIndex) || 0,
-          image_fit: configObj.imageFit || "contain",
+          image_fit: configObj.imageFit || "cover",
           updated_at: new Date().toISOString()
         });
 

@@ -72,7 +72,7 @@
   const defaultList = isPortrait ? DEFAULT_PORTRAIT : DEFAULT_LANDSCAPE;
 
   let list = [...defaultList];
-  let config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
+  let config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" };
   let currentIndex = 0;
   let timer = null;
 
@@ -114,10 +114,10 @@
         if (dbCfg && typeof dbCfg === "object") {
           config = dbCfg;
         } else {
-          config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
+          config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" };
         }
       } catch(e) {
-        config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "contain" };
+        config = { playbackMode: "playlist", freezeIndex: 0, imageFit: "cover" };
       }
     }
   }
@@ -135,7 +135,7 @@
     if (item.type === "image") {
       const img = new Image();
       img.src = item.src;
-      img.style.objectFit = config.imageFit || "contain";
+      img.style.objectFit = config.imageFit || "cover";
       newSlide.appendChild(img);
     } else {
       const div = document.createElement("div");
