@@ -937,6 +937,11 @@
       transition: opacity 0.25s;
     }
 
+    /* Modal must sit above the auth gate */
+    #changePwModal {
+      z-index: 100000;
+    }
+
     .modal-overlay.active {
       opacity: 1;
       pointer-events: auto;
