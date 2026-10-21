@@ -36,7 +36,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html {
-      width: 100%;
+      width: 100vw;
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
     }
@@ -48,6 +48,7 @@
       min-height: 100vh;
       width: 100%;
       overflow-x: hidden;
+      -webkit-overflow-scrolling: auto;
     }
 
     /* Grain overlay */
@@ -873,19 +874,20 @@
     /* ── TOAST ── */
     #toastContainer {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
+      top: 70px;
+      right: 18px;
+      z-index: 99999;
       display: flex;
       flex-direction: column;
       gap: 8px;
       pointer-events: none;
+      max-width: calc(100vw - 36px);
     }
 
     .toast {
       pointer-events: auto;
-      min-width: 280px;
-      max-width: 400px;
+      min-width: 240px;
+      max-width: 380px;
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-left: 3px solid var(--amber);
@@ -1031,10 +1033,15 @@
       }
       .topbar-actions {
         gap: 2px;
+        margin-left: auto;
+        flex-shrink: 0;
       }
       .btn-nav {
         padding: 6px 8px;
         font-size: 12px;
+      }
+      .btn-nav .btn-text {
+        display: none;
       }
       .layout {
         padding: 10px 10px 30px;
