@@ -144,23 +144,27 @@
       newSlide.appendChild(div);
     }
 
-    stage.appendChild(newSlide);
-
-    // Force reflow for smooth CSS opacity transition
-    void newSlide.offsetWidth;
-
-    // Fade-in new slide
-    newSlide.classList.add("active");
-
-    // Fade-out old slides & cleanup after 1.1s
-    oldSlides.forEach(oldSlide => {
-      oldSlide.classList.remove("active");
-      setTimeout(() => {
-        if (oldSlide.parentNode === stage) {
-          stage.removeChild(oldSlide);
-        }
-      }, 1150);
-    });
+    // Preload image before showing slide to avoid flicker
+    const img = newSlide.querySelector("img");
+    if (img && img.src) {
+      img.onload = () => {
+        stage.appendChild(newSlide);
+        newSlide.classList.add("active");
+        // Remove old slides immediately (hard switch)
+        oldSlides.forEach(oldSlide => oldSlide.remove());
+      };
+      img.onerror = () => {
+        // Fallback: show slide anyway if image fails
+        stage.appendChild(newSlide);
+        newSlide.classList.add("active");
+        oldSlides.forEach(oldSlide => oldSlide.remove());
+      };
+    } else {
+      // Text slide: show immediately
+      stage.appendChild(newSlide);
+      newSlide.classList.add("active");
+      oldSlides.forEach(oldSlide => oldSlide.remove());
+    }
   }
 
   async function startPlayback() {
@@ -194,11 +198,8 @@
     const duration = Math.max(Number(item.duration) || 5000, 1000);
     currentIndex = (currentIndex + 1) % list.length;
 
-    timer = setTimeout(() => {
-      loadData().then(() => {
-        playNext();
-      });
-    }, duration);
+    // Do not reload data every cycle; realtime subscribers handle updates.
+    timer = setTimeout(playNext, duration);
   }
 
   // Real-time synchronization handlers
