@@ -3,3 +3,7 @@ shots/
 node_modules/
 .DS_Store
 *.log
+_serve.js
+verify-*.png
+mobile-*.png
+dashboard-*.png
