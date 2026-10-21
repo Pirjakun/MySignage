@@ -322,14 +322,19 @@
       margin: 0 auto;
       padding: 24px 24px 60px;
       display: grid;
-      grid-template-columns: 1fr 340px;
+      grid-template-columns: minmax(0, 1fr) 340px;
       gap: 24px;
       align-items: start;
     }
 
+    .main-col,
+    .sidebar-col {
+      min-width: 0;
+    }
+
     @media (max-width: 900px) {
       .layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
       }
     }
 
@@ -375,7 +380,8 @@
     }
 
     .tab-btn {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -390,6 +396,8 @@
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .tab-btn:hover {
@@ -1062,9 +1070,29 @@
       }
       .form-row {
         gap: 6px;
+        flex-wrap: wrap;
       }
       .form-input.w-small {
         width: 70px;
+      }
+      .tab-row {
+        margin-bottom: 12px;
+      }
+      .tab-btn {
+        padding: 10px 8px;
+        font-size: 13px;
+        gap: 5px;
+      }
+      .playlist-item {
+        gap: 8px;
+        padding: 10px;
+      }
+      .item-actions {
+        gap: 3px;
+      }
+      .icon-btn {
+        width: 28px;
+        height: 28px;
       }
     }
   </style>
