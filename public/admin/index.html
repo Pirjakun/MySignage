@@ -1054,9 +1054,15 @@
 
       <form id="authLoginForm" onsubmit="return handleLogin(event)">
         <div class="auth-field">
+          <label class="auth-label">Username</label>
+          <div class="auth-input-wrap">
+            <input id="authUsername" type="text" placeholder="Masukkan username..." autocomplete="username" required autofocus>
+          </div>
+        </div>
+        <div class="auth-field">
           <label class="auth-label">Password</label>
           <div class="auth-input-wrap">
-            <input id="authPassword" type="password" placeholder="Masukkan password..." autocomplete="current-password" required autofocus>
+            <input id="authPassword" type="password" placeholder="Masukkan password..." autocomplete="current-password" required>
             <button type="button" class="auth-toggle" onclick="toggleAuthPassword()" title="Tampilkan/sembunyikan">
               <svg id="authEyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
@@ -1743,10 +1749,12 @@
 
     /* ── AUTH MODULE ── */
     const AUTH_KEYS = {
+      USERNAME: "mysignage_admin_username",
       PW_HASH: "mysignage_admin_pw_hash",
       MUST_CHANGE: "mysignage_admin_must_change",
       AUTHED: "mysignage_admin_authed"
     };
+    const DEFAULT_USERNAME = "admin";
     const DEFAULT_PASSWORD = "12345678";
 
     async function sha256(text) {
@@ -1762,18 +1770,18 @@
       const client = MySignageSupabase.getClient();
       if (!client) return null;
       try {
-        const { data, error } = await client.from("admin_auth").select("pw_hash, must_change").eq("id", "main").single();
+        const { data, error } = await client.from("admin_auth").select("username, pw_hash, must_change").eq("id", "main").single();
         if (error && error.code !== "PGRST116") console.warn("Supabase auth fetch error:", error);
         return data;
       } catch (e) { console.warn("Supabase auth exception:", e); return null; }
     }
 
-    async function saveAuthCloud(hash, mustChange) {
+    async function saveAuthCloud(username, hash, mustChange) {
       if (typeof MySignageSupabase === "undefined") return false;
       const client = MySignageSupabase.getClient();
       if (!client) return false;
       try {
-        const { error } = await client.from("admin_auth").upsert({ id: "main", pw_hash: hash, must_change: mustChange, updated_at: new Date().toISOString() });
+        const { error } = await client.from("admin_auth").upsert({ id: "main", username: username || DEFAULT_USERNAME, pw_hash: hash, must_change: mustChange, updated_at: new Date().toISOString() });
         return !error;
       } catch (e) { return false; }
     }
@@ -1786,6 +1794,7 @@
 
     async function handleLogin(e) {
       e.preventDefault();
+      const user = (document.getElementById("authUsername").value || "").trim();
       const pw = document.getElementById("authPassword").value;
       const btn = document.getElementById("authSubmitBtn");
       const errEl = document.getElementById("authError");
@@ -1797,22 +1806,26 @@
       try {
         const inputHash = await sha256(pw);
         
-        // Coba ambil dari cloud dulu
         let authData = await fetchAuthCloud();
+        let storedUser = authData && authData.username ? authData.username : (localStorage.getItem(AUTH_KEYS.USERNAME) || DEFAULT_USERNAME);
         let storedHash = authData ? authData.pw_hash : localStorage.getItem(AUTH_KEYS.PW_HASH);
         let mustChange = authData ? authData.must_change : (localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true");
 
         if (!storedHash) {
           // Setup awal
           const defaultHash = await sha256(DEFAULT_PASSWORD);
-          if (inputHash !== defaultHash) throw new Error("Password salah. Silakan coba lagi.");
+          if (user.toLowerCase() !== DEFAULT_USERNAME.toLowerCase() || inputHash !== defaultHash) {
+            throw new Error("Username atau Password salah.");
+          }
           
+          localStorage.setItem(AUTH_KEYS.USERNAME, DEFAULT_USERNAME);
           localStorage.setItem(AUTH_KEYS.PW_HASH, inputHash);
           localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "true");
           localStorage.setItem(AUTH_KEYS.AUTHED, "true");
-          await saveAuthCloud(inputHash, true);
+          await saveAuthCloud(DEFAULT_USERNAME, inputHash, true);
           showChangePwModal();
-        } else if (inputHash === storedHash) {
+        } else if (user.toLowerCase() === storedUser.toLowerCase() && inputHash === storedHash) {
+          localStorage.setItem(AUTH_KEYS.USERNAME, storedUser);
           localStorage.setItem(AUTH_KEYS.PW_HASH, storedHash);
           localStorage.setItem(AUTH_KEYS.MUST_CHANGE, mustChange ? "true" : "false");
           localStorage.setItem(AUTH_KEYS.AUTHED, "true");
@@ -1822,7 +1835,7 @@
             enterAdmin();
           }
         } else {
-          throw new Error("Password salah. Silakan coba lagi.");
+          throw new Error("Username atau Password salah.");
         }
       } catch (err) {
         errEl.textContent = "✕ " + err.message;
@@ -1877,9 +1890,10 @@
         return;
       }
       const hash = await sha256(newPw);
+      const username = localStorage.getItem(AUTH_KEYS.USERNAME) || DEFAULT_USERNAME;
       localStorage.setItem(AUTH_KEYS.PW_HASH, hash);
       localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "false");
-      await saveAuthCloud(hash, false);
+      await saveAuthCloud(username, hash, false);
       closeChangePwModal();
       enterAdmin();
       showToast("Password Diubah", "Password berhasil diubah. Selamat datang!", "success");
@@ -1896,7 +1910,7 @@
       document.body.style.overflow = "hidden";
       document.getElementById("authPassword").value = "";
       document.getElementById("authError").style.display = "none";
-      document.getElementById("authPassword").focus();
+      document.getElementById("authUsername").focus();
       showToast("LogOut", "Anda telah keluar dari admin.", "info");
     }
 
@@ -1907,14 +1921,15 @@
       // Sync dengan cloud saat startup
       const cloudData = await fetchAuthCloud();
       if (cloudData) {
-        localStorage.setItem(AUTH_KEYS.PW_HASH, cloudData.pw_hash);
+        if (cloudData.username) localStorage.setItem(AUTH_KEYS.USERNAME, cloudData.username);
+        if (cloudData.pw_hash) localStorage.setItem(AUTH_KEYS.PW_HASH, cloudData.pw_hash);
         localStorage.setItem(AUTH_KEYS.MUST_CHANGE, cloudData.must_change ? "true" : "false");
       }
 
       const { authed, mustChange } = checkAuthState();
       if (!authed || mustChange) {
         document.getElementById("authGate").classList.remove("hidden");
-        document.getElementById("authPassword").focus();
+        document.getElementById("authUsername").focus();
       } else {
         enterAdmin();
       }

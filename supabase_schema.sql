@@ -6,6 +6,7 @@
 -- 1. Create Admin Auth Table
 CREATE TABLE IF NOT EXISTS public.admin_auth (
   id TEXT PRIMARY KEY DEFAULT 'main',
+  username TEXT DEFAULT 'admin',
   pw_hash TEXT NOT NULL DEFAULT '',
   must_change BOOLEAN DEFAULT true,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
