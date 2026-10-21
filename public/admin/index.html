@@ -1757,6 +1757,27 @@
       return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
+    async function fetchAuthCloud() {
+      if (typeof MySignageSupabase === "undefined") return null;
+      const client = MySignageSupabase.getClient();
+      if (!client) return null;
+      try {
+        const { data, error } = await client.from("admin_auth").select("pw_hash, must_change").eq("id", "main").single();
+        if (error && error.code !== "PGRST116") console.warn("Supabase auth fetch error:", error);
+        return data;
+      } catch (e) { console.warn("Supabase auth exception:", e); return null; }
+    }
+
+    async function saveAuthCloud(hash, mustChange) {
+      if (typeof MySignageSupabase === "undefined") return false;
+      const client = MySignageSupabase.getClient();
+      if (!client) return false;
+      try {
+        const { error } = await client.from("admin_auth").upsert({ id: "main", pw_hash: hash, must_change: mustChange, updated_at: new Date().toISOString() });
+        return !error;
+      } catch (e) { return false; }
+    }
+
     function checkAuthState() {
       const authed = localStorage.getItem(AUTH_KEYS.AUTHED) === "true";
       const mustChange = localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true";
@@ -1772,19 +1793,28 @@
       btn.disabled = true;
       document.querySelector(".auth-btn-text").style.display = "none";
       document.querySelector(".auth-btn-spinner").style.display = "inline";
+
       try {
         const inputHash = await sha256(pw);
-        const storedHash = localStorage.getItem(AUTH_KEYS.PW_HASH);
+        
+        // Coba ambil dari cloud dulu
+        let authData = await fetchAuthCloud();
+        let storedHash = authData ? authData.pw_hash : localStorage.getItem(AUTH_KEYS.PW_HASH);
+        let mustChange = authData ? authData.must_change : (localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true");
+
         if (!storedHash) {
-          // First-time setup: only the default password is accepted
+          // Setup awal
           const defaultHash = await sha256(DEFAULT_PASSWORD);
           if (inputHash !== defaultHash) throw new Error("Password salah. Silakan coba lagi.");
+          
           localStorage.setItem(AUTH_KEYS.PW_HASH, inputHash);
           localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "true");
           localStorage.setItem(AUTH_KEYS.AUTHED, "true");
+          await saveAuthCloud(inputHash, true);
           showChangePwModal();
         } else if (inputHash === storedHash) {
-          const mustChange = localStorage.getItem(AUTH_KEYS.MUST_CHANGE) === "true";
+          localStorage.setItem(AUTH_KEYS.PW_HASH, storedHash);
+          localStorage.setItem(AUTH_KEYS.MUST_CHANGE, mustChange ? "true" : "false");
           localStorage.setItem(AUTH_KEYS.AUTHED, "true");
           if (mustChange) {
             showChangePwModal();
@@ -1849,6 +1879,7 @@
       const hash = await sha256(newPw);
       localStorage.setItem(AUTH_KEYS.PW_HASH, hash);
       localStorage.setItem(AUTH_KEYS.MUST_CHANGE, "false");
+      await saveAuthCloud(hash, false);
       closeChangePwModal();
       enterAdmin();
       showToast("Password Diubah", "Password berhasil diubah. Selamat datang!", "success");
@@ -1870,16 +1901,26 @@
     }
 
     // ── INIT AUTH ──
-    (function initAuth() {
+    async function initAuth() {
       document.body.style.overflow = "hidden";
+      
+      // Sync dengan cloud saat startup
+      const cloudData = await fetchAuthCloud();
+      if (cloudData) {
+        localStorage.setItem(AUTH_KEYS.PW_HASH, cloudData.pw_hash);
+        localStorage.setItem(AUTH_KEYS.MUST_CHANGE, cloudData.must_change ? "true" : "false");
+      }
+
       const { authed, mustChange } = checkAuthState();
       if (!authed || mustChange) {
         document.getElementById("authGate").classList.remove("hidden");
         document.getElementById("authPassword").focus();
       } else {
-        dismissAuthGate();
+        enterAdmin();
       }
-    })();
+    }
+    initAuth();
+
   </script>
 </body>
 </html>

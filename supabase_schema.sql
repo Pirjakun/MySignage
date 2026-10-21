@@ -3,7 +3,21 @@
 -- Run this script in your Supabase SQL Editor
 -- ========================================================
 
--- 1. Create Playlists Table
+-- 1. Create Admin Auth Table
+CREATE TABLE IF NOT EXISTS public.admin_auth (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  pw_hash TEXT NOT NULL DEFAULT '',
+  must_change BOOLEAN DEFAULT true,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.admin_auth ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anon read admin_auth" ON public.admin_auth;
+CREATE POLICY "Allow anon read admin_auth" ON public.admin_auth FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anon update admin_auth" ON public.admin_auth;
+CREATE POLICY "Allow anon update admin_auth" ON public.admin_auth FOR UPDATE USING (true);
+
+-- 2. Create Playlists Table
 CREATE TABLE IF NOT EXISTS public.mysignage_playlists (
   id TEXT PRIMARY KEY, -- 'landscape' or 'portrait'
   items JSONB NOT NULL DEFAULT '[]'::jsonb,
