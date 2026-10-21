@@ -122,6 +122,18 @@
     }
   }
 
+  // Auto fit: use cover when image ratio is close to screen ratio,
+  // otherwise contain so the image is never cropped.
+  function pickFit(img) {
+    const stage = document.getElementById("stage");
+    if (!stage || !img.naturalWidth || !img.naturalHeight) return "cover";
+    const stageRatio = stage.clientWidth / stage.clientHeight;
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    if (!stageRatio || !imgRatio) return "cover";
+    const diff = Math.abs(imgRatio - stageRatio) / stageRatio;
+    return diff <= 0.12 ? "cover" : "contain";
+  }
+
   function showSlide(item) {
     if (!item) return;
     const stage = document.getElementById("stage");
@@ -135,7 +147,6 @@
     if (item.type === "image") {
       const img = new Image();
       img.src = item.src;
-      img.style.objectFit = config.imageFit || "cover";
       newSlide.appendChild(img);
     } else {
       const div = document.createElement("div");
@@ -147,18 +158,15 @@
     // Preload image before showing slide to avoid flicker
     const img = newSlide.querySelector("img");
     if (img && img.src) {
-      img.onload = () => {
-        stage.appendChild(newSlide);
-        newSlide.classList.add("active");
-        // Remove old slides immediately (hard switch)
-        oldSlides.forEach(oldSlide => oldSlide.remove());
-      };
-      img.onerror = () => {
-        // Fallback: show slide anyway if image fails
+      const present = () => {
+        img.style.objectFit = pickFit(img);
         stage.appendChild(newSlide);
         newSlide.classList.add("active");
         oldSlides.forEach(oldSlide => oldSlide.remove());
       };
+      img.onload = present;
+      img.onerror = present;
+      if (img.complete && img.naturalWidth) present();
     } else {
       // Text slide: show immediately
       stage.appendChild(newSlide);

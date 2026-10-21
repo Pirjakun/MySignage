@@ -37,7 +37,8 @@ html, body {
 .slide img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Fill the whole screen */
+  object-fit: cover; /* overridden per-image by auto fit */
+  background: #000;
   display: block;
 }
 
